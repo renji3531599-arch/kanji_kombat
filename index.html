@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1020" />
+    <meta name="description" content="漢検基準の読みだけで戦うオンライン漢字バトル、Kanji Kombat" />
+    <title>Kanji Kombat — 漢字オンラインバトル</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app-shell">
+      <aside class="sidebar" aria-label="メインナビゲーション">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true"><span>漢</span><i></i></div>
+          <div>
+            <div class="brand-name">KANJI <b>KOMBAT</b></div>
+            <div class="brand-subtitle">READ. REACT. RISE.</div>
+          </div>
+        </div>
+        <div class="sidebar-section-label">MAIN MENU</div>
+        <nav class="side-nav">
+          <button class="nav-item is-active" data-view="dashboard"><span class="nav-icon icon-grid"></span><span>ダッシュボード</span></button>
+          <button class="nav-item" data-view="battle"><span class="nav-icon icon-swords"></span><span>オンライン対戦</span><em class="live-dot"></em></button>
+          <button class="nav-item" data-view="practice"><span class="nav-icon icon-target"></span><span>トレーニング</span></button>
+          <button class="nav-item" data-view="rankings"><span class="nav-icon icon-trophy"></span><span>ランキング</span></button>
+        </nav>
+        <div class="sidebar-section-label sidebar-label-spaced">YOUR PROGRESS</div>
+        <div class="side-progress-card">
+          <div class="side-progress-top"><span>次のランクまで</span><b id="sidebar-xp-label">1,170 XP</b></div>
+          <div class="progress-track"><span id="sidebar-xp-bar" style="width: 68%"></span></div>
+          <div class="side-progress-foot"><span>LEVEL 12</span><span>13</span></div>
+        </div>
+        <div class="sidebar-bottom">
+          <button class="side-help" data-action="show-help"><span class="nav-icon icon-help"></span><span>遊び方・ルール</span></button>
+          <div class="mini-profile" data-action="profile">
+            <div class="avatar avatar-cyan avatar-sm"><span>H</span><i class="online-indicator"></i></div>
+            <div class="mini-profile-copy"><strong id="sidebar-player-name">HINATA</strong><span>Rising Reader</span></div>
+            <span class="icon-more"></span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-shell">
+        <header class="topbar">
+          <div class="topbar-context">
+            <span class="topbar-kicker">SEASON 03</span>
+            <span class="topbar-divider"></span>
+            <span class="topbar-page" id="topbar-page-title">アリーナへようこそ</span>
+          </div>
+          <div class="topbar-actions">
+            <div class="connection-pill"><span class="connection-dot"></span>サーバー接続中</div>
+            <button class="icon-button" data-action="notifications" aria-label="通知"><span class="icon-bell"></span><b class="notification-badge">2</b></button>
+            <button class="topbar-avatar avatar avatar-cyan" data-action="profile" aria-label="プロフィール"><span>H</span></button>
+          </div>
+        </header>
+        <div id="view-root" class="view-root"></div>
+      </main>
+    </div>
+    <div id="toast-root" aria-live="polite" aria-atomic="true"></div>
+    <div id="modal-root"></div>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

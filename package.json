@@ -1,0 +1,11 @@
+{
+  "name": "kanji-kombat",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "漢検基準の読みだけで競うオンライン漢字バトル",
+  "scripts": {
+    "dev": "python3 -m http.server 4173 --bind 0.0.0.0",
+    "start": "python3 -m http.server 4173 --bind 0.0.0.0"
+  }
+}
