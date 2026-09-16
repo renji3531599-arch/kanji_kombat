@@ -1,0 +1,17 @@
+{
+	"name": "kanji_kombat",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"KKShared": { "$path": "src/shared" }
+		},
+		"ServerScriptService": {
+			"KanjiKombat": { "$path": "src/server" }
+		},
+		"StarterPlayer": {
+			"StarterPlayerScripts": {
+				"KanjiKombatClient": { "$path": "src/client" }
+			}
+		}
+	}
+}
