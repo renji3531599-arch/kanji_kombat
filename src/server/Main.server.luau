@@ -60,6 +60,7 @@ local function sanitizeProfile(profile)
 		losses = profile.losses,
 		streak = profile.streak,
 		bestStreak = profile.bestStreak,
+		locale = profile.locale, -- 保存された表示言語 (未設定なら nil = 自動判定)
 	}
 end
 
@@ -87,4 +88,6 @@ task.spawn(function()
 	end
 end)
 
-print("[KanjiKombat] server ready - 問題数: " .. QuestionBank.count("K10") .. " (10級) ...")
+print("[KanjiKombat] server ready / 起動完了")
+print(string.format("[KanjiKombat] levels=%d, K10=%d, K01=%d questions",
+	#Config.LEVELS, QuestionBank.count("K10"), QuestionBank.count("K01")))
