@@ -356,6 +356,9 @@ function MatchService.practiceSubmit(player, idx)
 	if not st or not st.active then
 		return
 	end
+	if not st.correct then
+		return -- まだ問題を出していない (最初の practiceQ が届く前のクリック)
+	end
 	local ok = (idx == st.correct)
 	if ok then
 		st.streak = st.streak + 1

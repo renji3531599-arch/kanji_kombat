@@ -100,6 +100,7 @@ tools/
   test_luau.py                  # 構文チェック + i18n/ローマ字検証 + 問題データ検証 (lupa/LuaJIT)
   client_sim.lua                # Roblox API のモック (クライアントのスモークテスト用)
   client_test_hook.luau         # そのモックからUIの表示文字列を検査するための覗き窓
+  server_sim.lua                # サーバーをモック上で起動し、C2S→S2C を通すスモークテスト
   build_place.py                # .rbxlx 生成
 ```
 
@@ -117,13 +118,17 @@ tools/
 ### 多言語まわりの検証
 
 ```bash
-python3 tools/test_luau.py
+python3 tools/test_luau.py            # lupa が必要 (pip install lupa)
 # - 全ファイルの構文チェック
 # - Romaji: かな→ローマ字のケース + 12,000問すべてで選択肢4つのローマ字が重複しないこと
 # - I18n: ja/en の全キーが揃っていること・コードから参照されたキーが存在すること
 # - 問題データ: 選択肢4つ・読みはひらがな・誤答重複なし
 # - クライアント: Roblox API をモックして起動→対戦→練習→🌐言語切替を通し、
 #   実際にUIへ表示された文字列 (Level 10 / juumoku / きょうしゅう など) を検証
+# - サーバー: Main.server.luau をモック上で起動し、クライアント役として C2S
+#   (practiceStart / practiceSubmit / queue / submit) を発火 →
+#   practiceQ・question・answerResult・matchEnd が実際に返ってくることを検証
+#   (リモートの繋ぎ忘れで「練習で問題が1問も出ない」状態になるのを検出する)
 ```
 
 データを再生成する場合:

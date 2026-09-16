@@ -767,7 +767,7 @@ practiceButton.MouseButton1Click:Connect(function()
 	pracFeedback.Text = ""
 	lobby.Visible = false
 	prac.Visible = true
-	practiceLocked = false
+	practiceLocked = true -- 最初の practiceQ が届くまでは回答を受け付けない
 	renderPractice()
 end)
 cancelButton.MouseButton1Click:Connect(function()

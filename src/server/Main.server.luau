@@ -48,6 +48,15 @@ MatchService.init({
 	C2S = C2S,
 })
 
+-- クライアントからの操作 (対戦エントリー / 回答 / 練習モード) を受け取る。
+-- ここを繋がないとサーバーは何も受信せず、練習モードは問題が1問も出ない。
+C2S.OnServerEvent:Connect(function(player, data)
+	local ok, err = pcall(MatchService.onRemote, player, data)
+	if not ok then
+		warn("[MatchService] onRemote: " .. tostring(err))
+	end
+end)
+
 -- ------------------------------------------------- profile plumbing
 local function sanitizeProfile(profile)
 	local ratings = {}

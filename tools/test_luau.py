@@ -3,9 +3,12 @@
 lupa (LuaJIT) による検証:
   1. 全 .luau ファイルが Lua としてパースできること (構文チェック)
   2. KKShared (GameConfig / Romaji / I18n) の単体テスト
-  3. 問題データモジュールを実際に実行し、全問題の構造を検証
-  4. 全12,000問で選択肢4つのローマ字が重複しないこと (英語UI用の確認)
-  5. I18n のキーがコードから参照されている / 参照キーが存在する
+  3. クライアントを Roblox API のモック上で起動し、UIに出た文字列を検証
+  4. サーバー (Main.server.luau) をモック上で起動し、C2S を発火して応答を検証
+     → 「練習で問題が出ない / 対戦がマッチしない」のような配線ミスを検出する
+  5. 問題データモジュールを実際に実行し、全問題の構造を検証
+  6. 全12,000問で選択肢4つのローマ字が重複しないこと (英語UI用の確認)
+  7. I18n のキーがコードから参照されている / 参照キーが存在する
 """
 import glob
 import os
@@ -157,6 +160,38 @@ def client_sim(lua):
     return 0
 
 
+SERVER_MODULES = [
+    # QuestionBank は読み込み時に Data/Questions_* を require するので、この順序で
+    'QuestionBank', 'StatsService', 'ArenaService', 'LobbyService', 'MatchService',
+]
+
+
+def server_sim(lua, mods):
+    """Main.server.luau を実際に起動し、C2S を発火して応答を検証するスモークテスト"""
+    print()
+    print('--- server smoke test (mock Roblox API) ---')
+    # QuestionBank が WaitForChild("Questions_*") できるように問題データを先に登録しておく
+    for path in sorted(glob.glob(os.path.join(ROOT, 'src', 'server', 'data', '*.luau'))):
+        name = os.path.basename(path)[:-5]
+        mods[name] = lua.globals()['__load'](
+            name, open(path, encoding='utf-8').read())
+
+    sim = lua.execute(open(os.path.join(ROOT, 'tools', 'server_sim.lua'), encoding='utf-8').read())
+    module_dir = os.path.join(ROOT, 'src', 'server', 'Modules')
+    for name in SERVER_MODULES:
+        sim.add(name, open(os.path.join(module_dir, name + '.luau'), encoding='utf-8').read())
+    sim.add('KanjiKombat', open(os.path.join(ROOT, 'src', 'server', 'Main.server.luau'),
+                                encoding='utf-8').read())
+
+    summary, errs = sim.run()
+    print('  ' + summary)
+    if errs:
+        for line in errs.split('\n'):
+            print('  FAIL', line)
+        return 1
+    return 0
+
+
 def source_keys():
     """src/ から I18n のキー参照を集める (英語UIの文言が定義されているか確認するため)"""
     used = set()
@@ -274,6 +309,9 @@ def main():
 
     # ---- 3. client smoke test (mock Roblox API)
     errors += client_sim(lua)
+
+    # ---- 3b. server smoke test (mock Roblox API)
+    errors += server_sim(lua, mods)
 
     # ---- 4. execute + validate data modules
     print()
