@@ -55,7 +55,8 @@ function MatchService.joinQueue(player, levelKey)
 		queues[levelKey] = {}
 	end
 	table.insert(queues[levelKey], player)
-	send(player, "toast", { msg = Config.levelByKey(levelKey).label .. " の対戦相手を探しています…" })
+	-- 言語はクライアント側で決める (キー + パラメータだけ送る)
+	send(player, "toast", { key = "toastSearching", args = { level = levelKey } })
 	broadcastQueueCounts()
 end
 
@@ -411,6 +412,8 @@ function MatchService.onRemote(player, data)
 		MatchService.practiceNext(player)
 	elseif a == "practiceStop" then
 		MatchService.practiceStop(player)
+	elseif a == "setLocale" and type(data.locale) == "string" then
+		StatsService.setLocale(player, data.locale, data.source)
 	end
 end
 

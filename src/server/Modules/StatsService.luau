@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("GameConfig"))
+local I18n = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("I18n"))
 
 local StatsService = {}
 
@@ -22,7 +23,15 @@ local function defaultProfile()
 	for _, lv in ipairs(Config.LEVELS) do
 		ratings[lv.key] = Config.DEFAULT_RATING
 	end
-	return { ratings = ratings, wins = 0, losses = 0, streak = 0, bestStreak = 0 }
+	-- locale = プレイヤーが🌐ボタンで選んだ設定 (保存される)
+	-- uiLocale = 今回のセッションの表示言語 (端末ロケールの自動判定 or locale)
+	return { ratings = ratings, wins = 0, losses = 0, streak = 0, bestStreak = 0,
+		locale = nil, uiLocale = nil }
+end
+
+local function localeOf(profile)
+	local code = (profile and (profile.uiLocale or profile.locale)) or Config.DEFAULT_LOCALE
+	return I18n.localeFromId(code)
 end
 
 function StatsService.get(player)
@@ -52,6 +61,9 @@ function StatsService.load(player)
 			if type(data.bestStreak) == "number" then
 				profile.bestStreak = data.bestStreak
 			end
+			if type(data.locale) == "string" then
+				profile.locale = I18n.localeFromId(data.locale)
+			end
 			if type(data.ratings) == "table" then
 				for _, lv in ipairs(Config.LEVELS) do
 					local r = data.ratings[lv.key]
@@ -66,14 +78,36 @@ function StatsService.load(player)
 	StatsService.setupLeaderstats(player, profile)
 end
 
+-- リーダーボード (勝数 / Wins) — 表示言語に合わせて名前を切り替える
 function StatsService.setupLeaderstats(player, profile)
-	local ls = Instance.new("Folder")
-	ls.Name = "leaderstats"
-	local wins = Instance.new("IntValue")
-	wins.Name = "勝数"
+	local ls = player:FindFirstChild("leaderstats")
+	if not ls then
+		ls = Instance.new("Folder")
+		ls.Name = "leaderstats"
+		ls.Parent = player
+	end
+	local wins = ls:FindFirstChild("勝数") or ls:FindFirstChild("Wins")
+	if not wins then
+		wins = Instance.new("IntValue")
+		wins.Parent = ls
+	end
+	wins.Name = (localeOf(profile) == "ja") and "勝数" or "Wins"
 	wins.Value = profile.wins
-	wins.Parent = ls
-	ls.Parent = player
+end
+
+-- クライアントから通知された表示言語 (source = "manual" のときだけ保存する)
+function StatsService.setLocale(player, code, source)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	local normalized = I18n.localeFromId(code)
+	profile.uiLocale = normalized
+	if source == "manual" then
+		profile.locale = normalized
+		StatsService.markDirty(player)
+	end
+	StatsService.setupLeaderstats(player, profile)
 end
 
 function StatsService.markDirty(player)
@@ -116,8 +150,9 @@ function StatsService.applyResult(levelKey, winner, loser)
 		pw.bestStreak = pw.streak
 	end
 	local ls = winner:FindFirstChild("leaderstats")
-	if ls and ls:FindFirstChild("勝数") then
-		ls["勝数"].Value = pw.wins
+	local winsValue = ls and (ls:FindFirstChild("勝数") or ls:FindFirstChild("Wins"))
+	if winsValue then
+		winsValue.Value = pw.wins
 	end
 	StatsService.markDirty(winner)
 	StatsService.markDirty(loser)

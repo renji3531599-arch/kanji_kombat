@@ -1,10 +1,43 @@
-# 漢字コンバット (Kanji Kombat) 🈶⚔️
+# 漢字コンバット / KANJI KOMBAT 🈶⚔️
 
 Roblox で遊べる**漢字読みオンリーのオンライン対戦ゲーム**。
 出題難易度は**日本漢字能力検定（漢検）の級別漢字表（2020年改正）に準拠**し、
 **10級〜1級の全12級 × 各1,000問 = 計12,000問**を内蔵しています。
 
 ![levels](https://img.shields.io/badge/%E6%BC%A2%E6%A4%9C-10%E7%B4%9A%E2%88%921%E7%B4%9A-red) ![questions](https://img.shields.io/badge/%E5%95%8F%E9%A1%8C-12,000%E5%95%8F-blue)
+
+---
+
+## English
+
+**Kanji Kombat** is an online kanji *reading* battle game for Roblox. Pick a level, get matched with another player, and answer 4-choice reading questions; correct answers deal damage, and each level has its own Elo rating.
+
+* **12,000 questions** — 12 levels × 1,000, following the Japan Kanji Aptitude Test (*Kanken*) grades 10 → 1. Grade 10 is 1st-year elementary (80 kanji); grade 1 is expert level (~6,000 kanji).
+* **Bilingual UI** — Japanese for players whose Roblox locale is `ja*`, English for everyone else, with a **🌐 toggle** in the lobby (your choice is saved).
+* **Made for learners** — in English mode the choices show **romaji + kana** (e.g. `kyoushuu / きょうしゅう`), and each level is labelled with its school grade and a rough **JLPT equivalent** (`Level 10 · Grade 1 (elementary) · ≈ JLPT N5`).
+* **Match rules** — 10 rounds, 12 seconds per question, 100 HP, base damage 20 (+10 for a fast answer, +5 for answering first); sudden death if HP is tied; Elo rating per level (starts at 1000).
+
+Run it: open `KanjiKombat.rbxlx` in Roblox Studio and press ▶ Play (publish the place and raise the max player count for online matches).
+
+---
+
+## 多言語対応（日本語 / English）
+
+英語圏向けに、UI は **日本語 / 英語の自動切り替え + 手動切り替え**に対応しています。
+
+| 項目 | 日本語UI | 英語UI |
+| --- | --- | --- |
+| タイトル | 漢字コンバット | **KANJI KOMBAT**（起動時のタイトル画面は英語メイン） |
+| レベルの呼び方 | 10級 / 準2級 | `Level 10` / `Level Pre-2` |
+| レベルの説明 | 小学校1年生修了程度 | `Grade 1 (elementary) · ≈ JLPT N5` |
+| 読みの選択肢 | ひらがな（きょうしゅう） | **ローマ字 + かな**（`kyoushuu` / きょうしゅう） |
+| 答えた後 | 正解は「きょうしゅう」 | `Wrong… the answer is “kyoushuu / きょうしゅう”` |
+| リーダーボード | 勝数 | `Wins` |
+
+* 言語は **端末のロケール（`Player.LocaleId`）から自動判定**します。`ja*` なら日本語、それ以外は英語。
+* ロビー右上の **🌐 ボタン**でいつでも切り替え可能。選んだ言語は DataStore に保存され、次回以降も使われます。
+* サーバーは文章ではなく「キー + パラメータ」を送るため、同じサーバーに日本語・英語のプレイヤーが混在しても正しく表示されます。
+* 文言の追加方法・翻訳の足し方は [docs/I18N.md](docs/I18N.md) を参照。
 
 ---
 
@@ -44,6 +77,8 @@ rojo build default.project.json -o KanjiKombat.rbxlx
 ```
 src/
   shared/GameConfig.luau        # 級定義・ダメージ値などの共有設定
+  shared/I18n.luau              # 日本語/英語の文言とロケール解決 (t/levelTitle/levelDesc)
+  shared/Romaji.luau            # かな → ローマ字 (英語UIで読みを併記するため)
   server/
     Main.server.luau            # エントリポイント (リモート生成・ワールド構築・ループ)
     Modules/
@@ -62,7 +97,9 @@ tools/
   validate_lists.py             # 級リストの検証 (字数・漢検累計との整合)
   fix_lists.py                  # PDF抽出由来の文字修正の適用記録
   generate_questions.py         # 問題ジェネレーター
-  test_luau.py                  # 構文チェック + 問題データ検証 (lupa/LuaJIT)
+  test_luau.py                  # 構文チェック + i18n/ローマ字検証 + 問題データ検証 (lupa/LuaJIT)
+  client_sim.lua                # Roblox API のモック (クライアントのスモークテスト用)
+  client_test_hook.luau         # そのモックからUIの表示文字列を検査するための覗き窓
   build_place.py                # .rbxlx 生成
 ```
 
@@ -76,6 +113,18 @@ tools/
   誤答選択肢（ダミー）は「同じ漢字の別の音読みへの読み替え」（例: 残念→ざんねん vs さんねん）など、
   漢検で実際に引っかけになる読みを優先的に採用しています。
 - 各級とも**その級の新出漢字を必ず1問以上カバー**（10級〜5級は単漢字の読み問題も含む）。
+
+### 多言語まわりの検証
+
+```bash
+python3 tools/test_luau.py
+# - 全ファイルの構文チェック
+# - Romaji: かな→ローマ字のケース + 12,000問すべてで選択肢4つのローマ字が重複しないこと
+# - I18n: ja/en の全キーが揃っていること・コードから参照されたキーが存在すること
+# - 問題データ: 選択肢4つ・読みはひらがな・誤答重複なし
+# - クライアント: Roblox API をモックして起動→対戦→練習→🌐言語切替を通し、
+#   実際にUIへ表示された文字列 (Level 10 / juumoku / きょうしゅう など) を検証
+```
 
 データを再生成する場合:
 

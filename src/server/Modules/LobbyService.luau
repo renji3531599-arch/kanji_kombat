@@ -66,7 +66,8 @@ function LobbyService.build(folder)
 	label.Font = Enum.Font.GothamBold
 	label.TextScaled = true
 	label.TextColor3 = Color3.fromRGB(245, 210, 90)
-	label.Text = Config.GAME_NAME
+	-- ロゴはラテン表記 + 和文を併記 (日本語/英語どちらのプレイヤーにも読めるように)
+	label.Text = (Config.GAME_NAME_EN or "KANJI KOMBAT") .. " / " .. Config.GAME_NAME
 	label.Parent = gui
 	local sub = Instance.new("TextLabel")
 	sub.Size = UDim2.fromScale(1, 0.35)
@@ -75,7 +76,7 @@ function LobbyService.build(folder)
 	sub.Font = Enum.Font.Gotham
 	sub.TextScaled = true
 	sub.TextColor3 = Color3.fromRGB(220, 220, 230)
-	sub.Text = "読み勝負・漢字バトル 〜 漢検10級〜1級 12,000問"
+	sub.Text = "READING BATTLES / 読み勝負 ・ 漢検10級〜1級 ・ 12,000問"
 	sub.Parent = gui
 
 	-- 周囲の灯篭風ポール

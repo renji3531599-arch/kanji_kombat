@@ -1,26 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX30"><Properties><string name="Name">Workspace</string></Properties></Item><Item class="ReplicatedStorage" referent="RBX3"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX2"><Properties><string name="Name">KKShared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source">--!nocheck
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX32"><Properties><string name="Name">Workspace</string></Properties></Item><Item class="ReplicatedStorage" referent="RBX5"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX4"><Properties><string name="Name">KKShared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source">--!nocheck
 -- 漢字コンバット shared configuration (ReplicatedStorage.KKShared.GameConfig)
 
 local GameConfig = {}
 
 GameConfig.GAME_NAME = "漢字コンバット"
 
--- 漢検10級〜1級 (公式 級別漢字表 2020改正準拠の配当漢字データを使用)
+-- レベル定義。label/desc は日本語UI、en = { label, desc } は英語UI用、
+-- jlpt は英語UI向けの「JLPT の目安」(あくまで目安。漢検の級とは別制度)。
 GameConfig.LEVELS = {
-	{ key = "K10", label = "10級", desc = "小学校1年生修了程度", kanji = 80,    color = { 90, 185, 105 } },
-	{ key = "K09", label = "9級",  desc = "小学校2年生修了程度", kanji = 240,   color = { 110, 175, 70 } },
-	{ key = "K08", label = "8級",  desc = "小学校3年生修了程度", kanji = 440,   color = { 150, 165, 50 } },
-	{ key = "K07", label = "7級",  desc = "小学校4年生修了程度", kanji = 642,   color = { 190, 155, 40 } },
-	{ key = "K06", label = "6級",  desc = "小学校5年生修了程度", kanji = 835,   color = { 215, 130, 35 } },
-	{ key = "K05", label = "5級",  desc = "小学校6年生修了程度", kanji = 1026,  color = { 235, 100, 30 } },
-	{ key = "K04", label = "4級",  desc = "中学校在学程度",     kanji = 1339,  color = { 240, 70, 45 } },
-	{ key = "K03", label = "3級",  desc = "中学校卒業程度",     kanji = 1623,  color = { 235, 50, 75 } },
-	{ key = "KP2", label = "準2級", desc = "高校在学程度",      kanji = 1951,  color = { 220, 45, 130 } },
-	{ key = "K02", label = "2級",  desc = "高校卒業程度",       kanji = 2136,  color = { 190, 45, 190 } },
-	{ key = "KP1", label = "準1級", desc = "大学・一般程度",    kanji = 2997,  color = { 140, 50, 220 } },
-	{ key = "K01", label = "1級",  desc = "大学・一般程度",     kanji = 6357,  color = { 70, 60, 225 } },
+	{ key = "K10", label = "10級",  desc = "小学校1年生修了程度", kanji = 80,   color = { 90, 185, 105 },
+		en = { label = "Level 10", desc = "Grade 1 (elementary)" }, jlpt = "≈ JLPT N5" },
+	{ key = "K09", label = "9級",   desc = "小学校2年生修了程度", kanji = 240,  color = { 110, 175, 70 },
+		en = { label = "Level 9", desc = "Grade 2 (elementary)" }, jlpt = "≈ JLPT N5" },
+	{ key = "K08", label = "8級",   desc = "小学校3年生修了程度", kanji = 440,  color = { 150, 165, 50 },
+		en = { label = "Level 8", desc = "Grade 3 (elementary)" }, jlpt = "≈ JLPT N4" },
+	{ key = "K07", label = "7級",   desc = "小学校4年生修了程度", kanji = 642,  color = { 190, 155, 40 },
+		en = { label = "Level 7", desc = "Grade 4 (elementary)" }, jlpt = "≈ JLPT N3" },
+	{ key = "K06", label = "6級",   desc = "小学校5年生修了程度", kanji = 835,  color = { 215, 130, 35 },
+		en = { label = "Level 6", desc = "Grade 5 (elementary)" }, jlpt = "≈ JLPT N3" },
+	{ key = "K05", label = "5級",   desc = "小学校6年生修了程度", kanji = 1026, color = { 235, 100, 30 },
+		en = { label = "Level 5", desc = "Grade 6 (elementary)" }, jlpt = "≈ JLPT N2" },
+	{ key = "K04", label = "4級",   desc = "中学校在学程度",      kanji = 1339, color = { 240, 70, 45 },
+		en = { label = "Level 4", desc = "Junior high (in progress)" }, jlpt = "≈ JLPT N2" },
+	{ key = "K03", label = "3級",   desc = "中学校卒業程度",      kanji = 1623, color = { 235, 50, 75 },
+		en = { label = "Level 3", desc = "Junior high graduate" }, jlpt = "≈ JLPT N1" },
+	{ key = "KP2", label = "準2級", desc = "高校在学程度",        kanji = 1951, color = { 220, 45, 130 },
+		en = { label = "Level Pre-2", desc = "High school (in progress)" }, jlpt = "≈ JLPT N1" },
+	{ key = "K02", label = "2級",   desc = "高校卒業程度",        kanji = 2136, color = { 190, 45, 190 },
+		en = { label = "Level 2", desc = "High school graduate" }, jlpt = "≈ JLPT N1" },
+	{ key = "KP1", label = "準1級", desc = "大学・一般程度",      kanji = 2997, color = { 140, 50, 220 },
+		en = { label = "Level Pre-1", desc = "University / adult" }, jlpt = "beyond JLPT N1" },
+	{ key = "K01", label = "1級",   desc = "大学・一般程度",      kanji = 6357, color = { 70, 60, 225 },
+		en = { label = "Level 1", desc = "University / adult · expert" }, jlpt = "beyond JLPT N1" },
 }
+
+GameConfig.GAME_NAME_EN = "KANJI KOMBAT" -- 英語UI用のタイトル (ロゴ表記)
+GameConfig.LOCALES = { "ja", "en" }       -- 対応ロケール (切り替え順)
+GameConfig.DEFAULT_LOCALE = "en"          -- 日本語以外のロケールは英語UIにフォールバック
 
 GameConfig.ROUND_COUNT = 10        -- 1マッチの問題数
 GameConfig.QUESTION_TIME = 12      -- 制限時間(秒)
@@ -49,7 +66,559 @@ function GameConfig.color3(lv)
 end
 
 return GameConfig
-</ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX24"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX23"><Properties><string name="Name">KanjiKombat</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX2"><Properties><string name="Name">I18n</string><ProtectedString name="Source">--!nocheck
+-- 多言語対応 (日本語 / 英語)。KKShared.I18n として共有される。
+--
+-- 方針:
+--   * 端末のロケール (Player.LocaleId / LocalizationService.RobloxLocaleId) で自動判定し、
+--     ja* なら日本語、それ以外は英語にフォールバックする。
+--   * プレイヤーが手動で切り替えた場合はその選択を DataStore に保存して優先する。
+--   * サーバーは文章を送らず「キー + パラメータ」を送る (送信側の環境に依存しない)。
+
+local Config = require(script.Parent:WaitForChild("GameConfig"))
+
+local I18n = {}
+
+I18n.LOCALES = Config.LOCALES
+I18n.DEFAULT = Config.DEFAULT_LOCALE or "en"
+
+-- ================================================================ strings
+-- {name} 形式のプレースホルダを I18n.t(key, {name = ...}) で置換する
+local STRINGS = {
+	-- ---------------------------------------------------------- lobby / title
+	title = {
+		ja = "漢字コンバット",
+		en = Config.GAME_NAME_EN or "KANJI KOMBAT",
+	},
+	subtitle = {
+		ja = "読みオンリー対戦 〜 級を選んで対戦相手と即バトル！",
+		en = "Kanji reading battles. Pick a level and fight instantly!",
+	},
+	splashSubtitle = {
+		ja = "読みオンリー対戦 · 漢検10級〜1級 · 12,000問",
+		en = "Kanji reading battles · Kanken levels 10 to 1 · 12,000 questions",
+	},
+	titleStart = {
+		ja = "クリックでスタート",
+		en = "Click to start",
+	},
+	levelsNote = {
+		ja = "出題範囲：漢検10級〜1級・各1,000問（計12,000問）",
+		en = "Levels follow Kanken (Japan Kanji Aptitude Test) grades 10 → 1, 1,000 questions each.",
+	},
+	profileLoading = {
+		ja = "プロフィール読込中…",
+		en = "Loading profile…",
+	},
+	profileStats = {
+		ja = "通算 {wins}勝 {losses}敗　連続 {streak}",
+		en = "{wins}W {losses}L · streak {streak}",
+	},
+	rating = {
+		ja = "レート {rating}",
+		en = "Rating {rating}",
+	},
+	levelInfo = {
+		ja = "漢字 {kanji}字 / 1,000問",
+		en = "1,000 questions · {kanji} kanji",
+	},
+	levelQueue = {
+		ja = "対戦待ち {n}人",
+		en = "{n} waiting now",
+	},
+
+	-- ---------------------------------------------------------- language switch
+	languageButton = {
+		ja = "🌐 English",
+		en = "🌐 日本語",
+	},
+	languageChanged = {
+		ja = "言語: 日本語",
+		en = "Language: English",
+	},
+	languageChangedAuto = {
+		ja = "言語: 日本語（端末設定から自動判定）",
+		en = "Language: English (auto-detected)",
+	},
+
+	-- ---------------------------------------------------------- lobby buttons
+	battleButton = {
+		ja = "対戦エントリー",
+		en = "Find a Match",
+	},
+	practiceButton = {
+		ja = "練習",
+		en = "Practice",
+	},
+	cancelButton = {
+		ja = "キャンセル",
+		en = "Cancel",
+	},
+	pickLevel = {
+		ja = "級を選んでね！",
+		en = "Pick a level first!",
+	},
+	selected = {
+		ja = "{level}（{desc}）を選択中",
+		en = "Selected: {level} — {desc}",
+	},
+	searching = {
+		ja = "マッチング中…",
+		en = "Searching for an opponent…",
+	},
+	toastSearching = {
+		ja = "{level} の対戦相手を探しています…",
+		en = "Looking for an opponent at {level}…",
+	},
+
+	-- ---------------------------------------------------------- battle
+	opponentLabel = {
+		ja = "相手HP",
+		en = "Opponent HP",
+	},
+	myHpLabel = {
+		ja = "自分HP",
+		en = "Your HP",
+	},
+	roundLabel = {
+		ja = "ROUND {round}/{total}",
+		en = "ROUND {round}/{total}",
+	},
+	suddenDeath = {
+		ja = "サドンデス！",
+		en = "SUDDEN DEATH!",
+	},
+	hintWord = {
+		ja = "この言葉の読み方を選べ",
+		en = "Choose the reading of this word",
+	},
+	hintKanji = {
+		ja = "この漢字の読み方を選べ",
+		en = "Choose the reading of this kanji",
+	},
+	preparing = {
+		ja = "準備中…",
+		en = "Get ready…",
+	},
+	answerCorrect = {
+		ja = "正解！ 与ダメージ {dealt}",
+		en = "Correct! +{dealt} damage",
+	},
+	answerWrong = {
+		ja = "ざんねん… 正解は「{answer}」",
+		en = "Missed — the answer is “{answer}”",
+	},
+
+	-- ---------------------------------------------------------- practice
+	practiceTitle = {
+		ja = "練習モード",
+		en = "Practice Mode",
+	},
+	practiceSubtitle = {
+		ja = "1人で読みトレーニング。連続正解をのばそう",
+		en = "Solo reading drill — build your streak",
+	},
+	practiceStreak = {
+		ja = "連続正解 {streak}",
+		en = "Streak: {streak}",
+	},
+	practiceCorrect = {
+		ja = "正解！ {answer}",
+		en = "Correct! {answer}",
+	},
+	practiceWrong = {
+		ja = "はずれ… 正解は「{answer}」",
+		en = "Wrong… the answer is “{answer}”",
+	},
+	practiceExit = {
+		ja = "練習をやめる",
+		en = "Quit Practice",
+	},
+
+	-- ---------------------------------------------------------- result
+	resultWin = {
+		ja = "WIN！",
+		en = "YOU WIN!",
+	},
+	resultLose = {
+		ja = "LOSE…",
+		en = "YOU LOSE…",
+	},
+	resultDraw = {
+		ja = "DRAW",
+		en = "DRAW",
+	},
+	resultDetail = {
+		ja = "VS {opponent}（{reason}）\nレート {before} → {after}（{delta}）\n通算 {wins}勝 {losses}敗",
+		en = "vs {opponent} ({reason})\nRating {before} → {after} ({delta})\n{wins}W / {losses}L",
+	},
+	resultDetailDraw = {
+		ja = "HPが同じまま10問終了",
+		en = "Ten rounds finished with equal HP",
+	},
+	reasonMatch = {
+		ja = "対戦",
+		en = "head-to-head",
+	},
+	reasonKill = {
+		ja = "KO勝ち",
+		en = "KO",
+	},
+	reasonLeave = {
+		ja = "不戦勝",
+		en = "opponent left",
+	},
+	backToLobby = {
+		ja = "ロビーへ",
+		en = "Back to Lobby",
+	},
+}
+
+-- ================================================================ state
+local current = I18n.DEFAULT
+
+local function normalize(code)
+	code = tostring(code or ""):lower()
+	if code:sub(1, 2) == "ja" then
+		return "ja"
+	end
+	return "en"
+end
+
+-- "ja-jp" / "en-us" などのロケールID → "ja" / "en"
+function I18n.localeFromId(id)
+	return normalize(id)
+end
+
+function I18n.setLocale(code)
+	current = normalize(code)
+	return current
+end
+
+function I18n.getLocale()
+	return current
+end
+
+-- 切り替え先 (ja &lt;-&gt; en)
+function I18n.otherLocale(code)
+	local c = normalize(code or current)
+	return (c == "ja") and "en" or "ja"
+end
+
+function I18n.localeLabel(code)
+	local c = normalize(code)
+	return (c == "ja") and "日本語" or "English"
+end
+
+-- 端末ロケールの自動判定 (クライアントのみ。サーバーでは既定値を返す)
+function I18n.detectLocale()
+	local id = ""
+	pcall(function()
+		local Players = game:GetService("Players")
+		local plr = Players and Players.LocalPlayer
+		if plr and plr.LocaleId and plr.LocaleId ~= "" then
+			id = plr.LocaleId
+		else
+			id = game:GetService("LocalizationService").RobloxLocaleId or ""
+		end
+	end)
+	if id == "" then
+		return nil, ""
+	end
+	return normalize(id), id
+end
+
+-- ================================================================ translate
+function I18n.raw(key, locale)
+	local entry = STRINGS[key]
+	if not entry then
+		return nil
+	end
+	return entry[normalize(locale or current)] or entry[I18n.DEFAULT] or key
+end
+
+function I18n.has(key)
+	return STRINGS[key] ~= nil
+end
+
+-- 定義済みキーの一覧 (tools/test_luau.py の検証用)
+function I18n.keys()
+	local out = {}
+	for k in pairs(STRINGS) do
+		out[#out + 1] = k
+	end
+	return out
+end
+
+-- I18n.t("profileStats", { wins = 3, losses = 1, streak = 2 })
+function I18n.t(key, params)
+	local s = I18n.raw(key)
+	if not s then
+		warn("[I18n] missing key: " .. tostring(key))
+		return tostring(key)
+	end
+	if params then
+		s = (s:gsub("{([%w_]+)}", function(k)
+			local v = params[k]
+			return v ~= nil and tostring(v) or ("{" .. k .. "}")
+		end))
+	end
+	return s
+end
+
+-- ================================================================ levels
+function I18n.levelTitle(levelKey)
+	local lv = Config.levelByKey(levelKey)
+	if not lv then
+		return tostring(levelKey)
+	end
+	if current == "en" and lv.en and lv.en.label then
+		return lv.en.label
+	end
+	return lv.label
+end
+
+function I18n.levelDesc(levelKey)
+	local lv = Config.levelByKey(levelKey)
+	if not lv then
+		return ""
+	end
+	local base
+	if current == "en" and lv.en and lv.en.desc then
+		base = lv.en.desc
+	else
+		base = lv.desc
+	end
+	-- 英語UIでは JLPT の目安も併記する
+	if current == "en" and lv.jlpt and lv.jlpt ~= "" then
+		return base .. " · " .. lv.jlpt
+	end
+	return base
+end
+
+-- 級の説明つき表記: 日本語「10級」/ 英語「Level 10 (Grade 1 · ≈ JLPT N5)」
+function I18n.levelFull(levelKey)
+	local t = I18n.levelTitle(levelKey)
+	local d = I18n.levelDesc(levelKey)
+	if d == "" then
+		return t
+	end
+	return t .. " (" .. d .. ")"
+end
+
+-- 読みの表示: 英語UIでは「きょうしゅう / kyoushuu」のよう併記する
+function I18n.reading(kana, romaji)
+	if current == "en" and romaji and romaji ~= "" then
+		return kana .. " / " .. romaji
+	end
+	return kana
+end
+
+return I18n
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3"><Properties><string name="Name">Romaji</string><ProtectedString name="Source">--!nocheck
+-- かな → ローマ字 (ヘボン式ベース / 長音は母音を重ねる wāpuro 式)
+-- 英語圏プレイヤー向けに読みの選択肢を "きょうしゅう / kyoushuu" のように併記するために使う。
+-- utf8 ライブラリに依存しない実装 (LuaJIT / Luau 両対応) — テストは tools/test_luau.py から実行。
+
+local Romaji = {}
+
+local BASE = {
+	["あ"] = "a", ["い"] = "i", ["う"] = "u", ["え"] = "e", ["お"] = "o",
+	["か"] = "ka", ["き"] = "ki", ["く"] = "ku", ["け"] = "ke", ["こ"] = "ko",
+	["が"] = "ga", ["ぎ"] = "gi", ["ぐ"] = "gu", ["げ"] = "ge", ["ご"] = "go",
+	["さ"] = "sa", ["し"] = "shi", ["す"] = "su", ["せ"] = "se", ["そ"] = "so",
+	["ざ"] = "za", ["じ"] = "ji", ["ず"] = "zu", ["ぜ"] = "ze", ["ぞ"] = "zo",
+	["た"] = "ta", ["ち"] = "chi", ["つ"] = "tsu", ["て"] = "te", ["と"] = "to",
+	["だ"] = "da", ["ぢ"] = "ji", ["づ"] = "zu", ["で"] = "de", ["ど"] = "do",
+	["な"] = "na", ["に"] = "ni", ["ぬ"] = "nu", ["ね"] = "ne", ["の"] = "no",
+	["は"] = "ha", ["ひ"] = "hi", ["ふ"] = "fu", ["へ"] = "he", ["ほ"] = "ho",
+	["ば"] = "ba", ["び"] = "bi", ["ぶ"] = "bu", ["べ"] = "be", ["ぼ"] = "bo",
+	["ぱ"] = "pa", ["ぴ"] = "pi", ["ぷ"] = "pu", ["ぺ"] = "pe", ["ぽ"] = "po",
+	["ま"] = "ma", ["み"] = "mi", ["む"] = "mu", ["め"] = "me", ["も"] = "mo",
+	["や"] = "ya", ["ゆ"] = "yu", ["よ"] = "yo",
+	["ら"] = "ra", ["り"] = "ri", ["る"] = "ru", ["れ"] = "re", ["ろ"] = "ro",
+	["わ"] = "wa", ["ゐ"] = "i", ["ゑ"] = "e", ["を"] = "o", ["ん"] = "n",
+	["ゔ"] = "vu",
+	["ぁ"] = "a", ["ぃ"] = "i", ["ぅ"] = "u", ["ぇ"] = "e", ["ぉ"] = "o",
+	["ゃ"] = "ya", ["ゅ"] = "yu", ["ょ"] = "yo", ["ゎ"] = "wa",
+	-- カタカナ (データは基本ひらがなだが一応)
+	["ア"] = "a", ["イ"] = "i", ["ウ"] = "u", ["エ"] = "e", ["オ"] = "o",
+	["カ"] = "ka", ["キ"] = "ki", ["ク"] = "ku", ["ケ"] = "ke", ["コ"] = "ko",
+	["サ"] = "sa", ["シ"] = "shi", ["ス"] = "su", ["セ"] = "se", ["ソ"] = "so",
+	["タ"] = "ta", ["チ"] = "chi", ["ツ"] = "tsu", ["テ"] = "te", ["ト"] = "to",
+	["ナ"] = "na", ["ニ"] = "ni", ["ヌ"] = "nu", ["ネ"] = "ne", ["ノ"] = "no",
+	["ハ"] = "ha", ["ヒ"] = "hi", ["フ"] = "fu", ["ヘ"] = "he", ["ホ"] = "ho",
+	["マ"] = "ma", ["ミ"] = "mi", ["ム"] = "mu", ["メ"] = "me", ["モ"] = "mo",
+	["ヤ"] = "ya", ["ユ"] = "yu", ["ヨ"] = "yo",
+	["ラ"] = "ra", ["リ"] = "ri", ["ル"] = "ru", ["レ"] = "re", ["ロ"] = "ro",
+	["ワ"] = "wa", ["ヲ"] = "o", ["ン"] = "n",
+}
+
+local COMBO = {
+	["きゃ"] = "kya", ["きゅ"] = "kyu", ["きょ"] = "kyo",
+	["ぎゃ"] = "gya", ["ぎゅ"] = "gyu", ["ぎょ"] = "gyo",
+	["しゃ"] = "sha", ["しゅ"] = "shu", ["しょ"] = "sho",
+	["じゃ"] = "ja", ["じゅ"] = "ju", ["じょ"] = "jo",
+	["ちゃ"] = "cha", ["ちゅ"] = "chu", ["ちょ"] = "cho",
+	["ぢゃ"] = "ja", ["ぢゅ"] = "ju", ["ぢょ"] = "jo",
+	["にゃ"] = "nya", ["にゅ"] = "nyu", ["にょ"] = "nyo",
+	["ひゃ"] = "hya", ["ひゅ"] = "hyu", ["ひょ"] = "hyo",
+	["びゃ"] = "bya", ["びゅ"] = "byu", ["びょ"] = "byo",
+	["ぴゃ"] = "pya", ["ぴゅ"] = "pyu", ["ぴょ"] = "pyo",
+	["みゃ"] = "mya", ["みゅ"] = "myu", ["みょ"] = "myo",
+	["りゃ"] = "rya", ["りゅ"] = "ryu", ["りょ"] = "ryo",
+	["ふぁ"] = "fa", ["ふぃ"] = "fi", ["ふぇ"] = "fe", ["ふぉ"] = "fo",
+	["うぃ"] = "wi", ["うぇ"] = "we", ["うぉ"] = "wo",
+	["しぇ"] = "she", ["じぇ"] = "je", ["ちぇ"] = "che",
+	["てぃ"] = "ti", ["でぃ"] = "di", ["とぅ"] = "tu", ["どぅ"] = "du",
+	["つぁ"] = "tsa", ["つぃ"] = "tsi", ["つぇ"] = "tse", ["つぉ"] = "tso",
+	["ゔぁ"] = "va", ["ゔぃ"] = "vi", ["ゔぇ"] = "ve", ["ゔぉ"] = "vo",
+}
+
+-- 同じ発音になるかな (じ/ぢ など) の衝突回避用の代替表記
+local ALT = { ["ぢ"] = "di", ["づ"] = "du" }
+local ALT_COMBO = { ["ぢゃ"] = "dya", ["ぢゅ"] = "dyu", ["ぢょ"] = "dyo" }
+
+local SMALL = {
+	["ぁ"] = true, ["ぃ"] = true, ["ぅ"] = true, ["ぇ"] = true, ["ぉ"] = true,
+	["ゃ"] = true, ["ゅ"] = true, ["ょ"] = true, ["ゎ"] = true,
+}
+local VOWELS = { a = true, i = true, u = true, e = true, o = true }
+local N_APOSTROPHE = {
+	["あ"] = true, ["い"] = true, ["う"] = true, ["え"] = true, ["お"] = true,
+	["や"] = true, ["ゆ"] = true, ["よ"] = true,
+	["ぁ"] = true, ["ぃ"] = true, ["ぅ"] = true, ["ぇ"] = true, ["ぉ"] = true,
+	["ゃ"] = true, ["ゅ"] = true, ["ょ"] = true,
+}
+
+-- UTF-8 文字列を1文字ずつのテーブルに分解 (utf8 ライブラリ非依存)
+local function chars(s)
+	local out, i, n = {}, 1, #s
+	while i &lt;= n do
+		local b = string.byte(s, i)
+		local len = 1
+		if b &gt;= 0xF0 then
+			len = 4
+		elseif b &gt;= 0xE0 then
+			len = 3
+		elseif b &gt;= 0xC0 then
+			len = 2
+		end
+		out[#out + 1] = string.sub(s, i, i + len - 1)
+		i = i + len
+	end
+	return out
+end
+
+-- i 番目 (1始まり) の音節を返す: romaji, 消費した文字数
+local function syllable(cs, i, alt)
+	local two = cs[i + 1] and (cs[i] .. cs[i + 1]) or nil
+	if two then
+		local c = (alt and ALT_COMBO[two]) or COMBO[two]
+		if c then
+			return c, 2
+		end
+	end
+	local ch = cs[i]
+	if ch == "ん" then
+		local nxt = cs[i + 1]
+		if nxt and N_APOSTROPHE[nxt] then
+			return "n'", 1
+		end
+		return "n", 1
+	end
+	if alt and ALT[ch] then
+		return ALT[ch], 1
+	end
+	return BASE[ch] or ch, 1
+end
+
+-- かな文字列 → ローマ字
+function Romaji.convert(kana, alt)
+	if type(kana) ~= "string" or kana == "" then
+		return kana or ""
+	end
+	local cs = chars(kana)
+	local out = {}
+	local i, n = 1, #cs
+	while i &lt;= n do
+		local c = cs[i]
+		if c == "っ" or c == "ッ" then
+			local nxt = cs[i + 1]
+			if nxt and not SMALL[nxt] and nxt ~= "ー" and nxt ~= "っ" and nxt ~= "ッ" then
+				local r = syllable(cs, i + 1, alt)
+				if r and r ~= "" then
+					if string.sub(r, 1, 2) == "ch" then
+						out[#out + 1] = "t" -- 抹茶 = matcha
+					else
+						local k = string.sub(r, 1, 1)
+						if not VOWELS[k] then
+							if k == "n" and alt then
+								-- なんにゅう (nannyuu) と なっにゅう (nannyuu) の区別
+								out[#out + 1] = "n'"
+							else
+								out[#out + 1] = k -- じゅっもく = jummoku (促音の重ね)
+							end
+						end
+					end
+				end
+			end
+			i = i + 1
+		elseif c == "ー" then
+			local prev = table.concat(out)
+			local v = ""
+			for j = #prev, 1, -1 do
+				local ch = string.sub(prev, j, j)
+				if VOWELS[ch] then
+					v = ch
+					break
+				end
+			end
+			out[#out + 1] = v -- らーめん = raamen
+			i = i + 1
+		else
+			local r, used = syllable(cs, i, alt)
+			out[#out + 1] = r
+			i = i + used
+		end
+	end
+	return table.concat(out)
+end
+
+-- 選択肢4つのように「並べたときに重複しない」ローマ字を返す (例: じ / ぢ → ji / di)
+function Romaji.convertMany(list)
+	local out, used = {}, {}
+	for i = 1, #list do
+		local r = Romaji.convert(list[i])
+		if used[r] then
+			-- 1) 先に出た同表記のものを代替表記へ移せないか (なっにゅう = nan'nyuu)
+			for j = 1, i - 1 do
+				if out[j] == r then
+					local alt = Romaji.convert(list[j], true)
+					if alt ~= r and not used[alt] then
+						out[j] = alt
+						used[alt] = true
+						used[r] = nil
+						break
+					end
+				end
+			end
+		end
+		if used[r] then
+			-- 2) 自分を代替表記にする (ぢ = di / づ = du)
+			local alt = Romaji.convert(list[i], true)
+			if alt ~= r and not used[alt] then
+				r = alt
+			end
+		end
+		out[i] = r
+		used[r] = true
+	end
+	return out
+end
+
+return Romaji
+</ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX26"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX25"><Properties><string name="Name">KanjiKombat</string><ProtectedString name="Source">--!nonstrict
 -- 漢字コンバット サーバーエントリポイント
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -111,6 +680,7 @@ local function sanitizeProfile(profile)
 		losses = profile.losses,
 		streak = profile.streak,
 		bestStreak = profile.bestStreak,
+		locale = profile.locale, -- 保存された表示言語 (未設定なら nil = 自動判定)
 	}
 end
 
@@ -138,8 +708,10 @@ task.spawn(function()
 	end
 end)
 
-print("[KanjiKombat] server ready - 問題数: " .. QuestionBank.count("K10") .. " (10級) ...")
-</ProtectedString></Properties><Item class="Folder" referent="RBX9"><Properties><string name="Name">Modules</string></Properties><Item class="ModuleScript" referent="RBX4"><Properties><string name="Name">QuestionBank</string><ProtectedString name="Source">--!nonstrict
+print("[KanjiKombat] server ready / 起動完了")
+print(string.format("[KanjiKombat] levels=%d, K10=%d, K01=%d questions",
+	#Config.LEVELS, QuestionBank.count("K10"), QuestionBank.count("K01")))
+</ProtectedString></Properties><Item class="Folder" referent="RBX11"><Properties><string name="Name">Modules</string></Properties><Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">QuestionBank</string><ProtectedString name="Source">--!nonstrict
 -- 問題バンク: ServerScriptService.KanjiKombat.Data の12レベル分の問題を読み込む
 local QuestionBank = {}
 
@@ -201,7 +773,7 @@ function QuestionBank.count(levelKey)
 end
 
 return QuestionBank
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX5"><Properties><string name="Name">StatsService</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">StatsService</string><ProtectedString name="Source">--!nonstrict
 -- プロフィール (DataStore) とレーティング管理
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
@@ -209,6 +781,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("GameConfig"))
+local I18n = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("I18n"))
 
 local StatsService = {}
 
@@ -225,7 +798,15 @@ local function defaultProfile()
 	for _, lv in ipairs(Config.LEVELS) do
 		ratings[lv.key] = Config.DEFAULT_RATING
 	end
-	return { ratings = ratings, wins = 0, losses = 0, streak = 0, bestStreak = 0 }
+	-- locale = プレイヤーが🌐ボタンで選んだ設定 (保存される)
+	-- uiLocale = 今回のセッションの表示言語 (端末ロケールの自動判定 or locale)
+	return { ratings = ratings, wins = 0, losses = 0, streak = 0, bestStreak = 0,
+		locale = nil, uiLocale = nil }
+end
+
+local function localeOf(profile)
+	local code = (profile and (profile.uiLocale or profile.locale)) or Config.DEFAULT_LOCALE
+	return I18n.localeFromId(code)
 end
 
 function StatsService.get(player)
@@ -255,6 +836,9 @@ function StatsService.load(player)
 			if type(data.bestStreak) == "number" then
 				profile.bestStreak = data.bestStreak
 			end
+			if type(data.locale) == "string" then
+				profile.locale = I18n.localeFromId(data.locale)
+			end
 			if type(data.ratings) == "table" then
 				for _, lv in ipairs(Config.LEVELS) do
 					local r = data.ratings[lv.key]
@@ -269,14 +853,36 @@ function StatsService.load(player)
 	StatsService.setupLeaderstats(player, profile)
 end
 
+-- リーダーボード (勝数 / Wins) — 表示言語に合わせて名前を切り替える
 function StatsService.setupLeaderstats(player, profile)
-	local ls = Instance.new("Folder")
-	ls.Name = "leaderstats"
-	local wins = Instance.new("IntValue")
-	wins.Name = "勝数"
+	local ls = player:FindFirstChild("leaderstats")
+	if not ls then
+		ls = Instance.new("Folder")
+		ls.Name = "leaderstats"
+		ls.Parent = player
+	end
+	local wins = ls:FindFirstChild("勝数") or ls:FindFirstChild("Wins")
+	if not wins then
+		wins = Instance.new("IntValue")
+		wins.Parent = ls
+	end
+	wins.Name = (localeOf(profile) == "ja") and "勝数" or "Wins"
 	wins.Value = profile.wins
-	wins.Parent = ls
-	ls.Parent = player
+end
+
+-- クライアントから通知された表示言語 (source = "manual" のときだけ保存する)
+function StatsService.setLocale(player, code, source)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	local normalized = I18n.localeFromId(code)
+	profile.uiLocale = normalized
+	if source == "manual" then
+		profile.locale = normalized
+		StatsService.markDirty(player)
+	end
+	StatsService.setupLeaderstats(player, profile)
 end
 
 function StatsService.markDirty(player)
@@ -319,8 +925,9 @@ function StatsService.applyResult(levelKey, winner, loser)
 		pw.bestStreak = pw.streak
 	end
 	local ls = winner:FindFirstChild("leaderstats")
-	if ls and ls:FindFirstChild("勝数") then
-		ls["勝数"].Value = pw.wins
+	local winsValue = ls and (ls:FindFirstChild("勝数") or ls:FindFirstChild("Wins"))
+	if winsValue then
+		winsValue.Value = pw.wins
 	end
 	StatsService.markDirty(winner)
 	StatsService.markDirty(loser)
@@ -345,7 +952,7 @@ game:BindToClose(function()
 end)
 
 return StatsService
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">ArenaService</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">ArenaService</string><ProtectedString name="Source">--!nonstrict
 -- 対戦アリーナの生成 (各級ごとに空中に1面)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("GameConfig"))
@@ -452,7 +1059,7 @@ function ArenaService.get(levelKey)
 end
 
 return ArenaService
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">LobbyService</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9"><Properties><string name="Name">LobbyService</string><ProtectedString name="Source">--!nonstrict
 -- ロビーマップ生成: 広場 + 鳥居風ゲート + 大看板
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("GameConfig"))
@@ -520,7 +1127,8 @@ function LobbyService.build(folder)
 	label.Font = Enum.Font.GothamBold
 	label.TextScaled = true
 	label.TextColor3 = Color3.fromRGB(245, 210, 90)
-	label.Text = Config.GAME_NAME
+	-- ロゴはラテン表記 + 和文を併記 (日本語/英語どちらのプレイヤーにも読めるように)
+	label.Text = (Config.GAME_NAME_EN or "KANJI KOMBAT") .. " / " .. Config.GAME_NAME
 	label.Parent = gui
 	local sub = Instance.new("TextLabel")
 	sub.Size = UDim2.fromScale(1, 0.35)
@@ -529,7 +1137,7 @@ function LobbyService.build(folder)
 	sub.Font = Enum.Font.Gotham
 	sub.TextScaled = true
 	sub.TextColor3 = Color3.fromRGB(220, 220, 230)
-	sub.Text = "読み勝負・漢字バトル 〜 漢検10級〜1級 12,000問"
+	sub.Text = "READING BATTLES / 読み勝負 ・ 漢検10級〜1級 ・ 12,000問"
 	sub.Parent = gui
 
 	-- 周囲の灯篭風ポール
@@ -573,7 +1181,7 @@ function LobbyService.getSpawn()
 end
 
 return LobbyService
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">MatchService</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX10"><Properties><string name="Name">MatchService</string><ProtectedString name="Source">--!nonstrict
 -- マッチメイキングと対戦進行、練習モード
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -630,7 +1238,8 @@ function MatchService.joinQueue(player, levelKey)
 		queues[levelKey] = {}
 	end
 	table.insert(queues[levelKey], player)
-	send(player, "toast", { msg = Config.levelByKey(levelKey).label .. " の対戦相手を探しています…" })
+	-- 言語はクライアント側で決める (キー + パラメータだけ送る)
+	send(player, "toast", { key = "toastSearching", args = { level = levelKey } })
 	broadcastQueueCounts()
 end
 
@@ -986,6 +1595,8 @@ function MatchService.onRemote(player, data)
 		MatchService.practiceNext(player)
 	elseif a == "practiceStop" then
 		MatchService.practiceStop(player)
+	elseif a == "setLocale" and type(data.locale) == "string" then
+		StatsService.setLocale(player, data.locale, data.source)
 	end
 end
 
@@ -1016,7 +1627,7 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 return MatchService
-</ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX22"><Properties><string name="Name">Data</string></Properties><Item class="ModuleScript" referent="RBX10"><Properties><string name="Name">Questions_K01</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX24"><Properties><string name="Name">Data</string></Properties><Item class="ModuleScript" referent="RBX12"><Properties><string name="Name">Questions_K01</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検1級 読み問題 1000問
 return {
@@ -2021,7 +2632,7 @@ return {
 {p="夭逝",a="ようせい",d={"おうせい","かみつぶて","みりん"},t="w"},
 {p="天譴",a="てんけん",d={"ほうふつ","まるのみ","みつまた"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX11"><Properties><string name="Name">Questions_K02</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX13"><Properties><string name="Name">Questions_K02</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検2級 読み問題 1000問
 return {
@@ -3026,7 +3637,7 @@ return {
 {p="色艶",a="いろつや",d={"はくげき","いたる","にわかに"},t="w"},
 {p="丼鉢",a="どんぶりばち",d={"りょうぶた","まるがわら","めいきょう"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX12"><Properties><string name="Name">Questions_K03</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX14"><Properties><string name="Name">Questions_K03</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検3級 読み問題 1000問
 return {
@@ -4031,7 +4642,7 @@ return {
 {p="勧誘",a="かんゆう",d={"けんゆう","おうぼ","かくり"},t="w"},
 {p="船籍",a="せんせき",d={"はやせ","ねばねば","けいほう"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX13"><Properties><string name="Name">Questions_K04</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX15"><Properties><string name="Name">Questions_K04</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検4級 読み問題 1000問
 return {
@@ -5036,7 +5647,7 @@ return {
 {p="花曇",a="はなぐもり",d={"ついきゅう","ことがら","びりょう"},t="w"},
 {p="舟",a="ふね",d={"ふりょ","せいぼ","ちんか"},t="s"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX14"><Properties><string name="Name">Questions_K05</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16"><Properties><string name="Name">Questions_K05</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検5級 読み問題 1000問
 return {
@@ -6041,7 +6652,7 @@ return {
 {p="討",a="うつ",d={"ふみ","こっし","げきか"},t="s"},
 {p="党",a="なかま",d={"ひひょう","なんかい","べっさつ"},t="s"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX15"><Properties><string name="Name">Questions_K06</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX17"><Properties><string name="Name">Questions_K06</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検6級 読み問題 1000問
 return {
@@ -7046,7 +7657,7 @@ return {
 {p="主義",a="しゅぎ",d={"さいせい","しじ","えいぞく"},t="w"},
 {p="才能",a="さいのう",d={"かめん","こうず","きしょう"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16"><Properties><string name="Name">Questions_K07</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX18"><Properties><string name="Name">Questions_K07</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検7級 読み問題 1000問
 return {
@@ -8051,7 +8662,7 @@ return {
 {p="最少",a="さいしょう",d={"しゅしょう","げんさん","こうがい"},t="w"},
 {p="反戦",a="はんせん",d={"ほんせん","たんせん","じゅしん"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX17"><Properties><string name="Name">Questions_K08</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX19"><Properties><string name="Name">Questions_K08</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検8級 読み問題 1000問
 return {
@@ -9056,7 +9667,7 @@ return {
 {p="銀行",a="ぎんこう",d={"ぎんあん","かいほう","きよう"},t="w"},
 {p="長所",a="ちょうしょ",d={"しゅしょう","しんりょく","きょういく"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX18"><Properties><string name="Name">Questions_K09</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20"><Properties><string name="Name">Questions_K09</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検9級 読み問題 1000問
 return {
@@ -10061,7 +10672,7 @@ return {
 {p="同日",a="どうじつ",d={"どうにち","こくがい","ごうり"},t="w"},
 {p="楽",a="たのしい",d={"けんち","じりき","ほうがく"},t="s"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX19"><Properties><string name="Name">Questions_K10</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX21"><Properties><string name="Name">Questions_K10</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検10級 読み問題 1000問
 return {
@@ -11066,7 +11677,7 @@ return {
 {p="三下",a="さんした",d={"ぞうした","やまて","じょしだい"},t="w"},
 {p="見出し",a="みだし",d={"ぶんがく","しじょ","かわかみ"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20"><Properties><string name="Name">Questions_KP1</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX22"><Properties><string name="Name">Questions_KP1</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検準1級 読み問題 1000問
 return {
@@ -12071,7 +12682,7 @@ return {
 {p="伽藍",a="がらん",d={"からん","うろこ","ほとんど"},t="w"},
 {p="杖",a="つえ",d={"あっけ","りんご","みそ"},t="w"},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX21"><Properties><string name="Name">Questions_KP2</string><ProtectedString name="Source">--!nolint
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX23"><Properties><string name="Name">Questions_KP2</string><ProtectedString name="Source">--!nolint
 -- Generated by tools/generate_questions.py - do not edit
 -- 漢検準2級 読み問題 1000問
 return {
@@ -13076,14 +13687,22 @@ return {
 {p="韻文",a="いんぶん",d={"いんもん","こんいん","ねこじた"},t="w"},
 {p="真偽",a="しんぎ",d={"しんか","こうずい","じゃぐち"},t="w"},
 }
-</ProtectedString></Properties></Item></Item></Item></Item><Item class="StarterPlayer" referent="RBX29"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX28"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX27"><Properties><string name="Name">KanjiKombatClient</string><ProtectedString name="Source">--!nonstrict
--- 漢字コンバット クライアント
+</ProtectedString></Properties></Item></Item></Item></Item><Item class="StarterPlayer" referent="RBX31"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX30"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX29"><Properties><string name="Name">KanjiKombatClient</string><ProtectedString name="Source">--!nonstrict
+-- Kanji Kombat client (bilingual: 日本語 / English)
+--
+-- 言語は端末ロケール (Player.LocaleId) から自動判定し、
+-- ロビー右上の 🌐 ボタンで手動切り替えもできる (選択はサーバーに保存)。
+-- 読みの選択肢は英語UIのときローマ字 + かなを併記する。
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local UiKit = require(script.Parent:WaitForChild("ClientModules"):WaitForChild("UiKit"))
 local Config = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("GameConfig"))
+local I18n = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("I18n"))
+local Romaji = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("Romaji"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local S2C = remotes:WaitForChild("ServerToClient")
@@ -13099,6 +13718,29 @@ local COL_GOOD = Color3.fromRGB(90, 220, 120)
 local COL_BAD = Color3.fromRGB(235, 80, 90)
 local COL_TEXT = Color3.fromRGB(238, 238, 246)
 local COL_DIM = Color3.fromRGB(150, 150, 170)
+local COL_BTN = Color3.fromRGB(45, 43, 60)
+
+-- ================================================================ locale
+-- "auto" = 端末ロケールから自動判定 / "manual" = 🌐 ボタンで選択 (保存される)
+local localeSource = "auto"
+local serverLocale = nil
+
+local function applyLocale(code)
+	I18n.setLocale(code)
+end
+
+local function detectInitialLocale()
+	local code = I18n.detectLocale()
+	return code or Config.DEFAULT_LOCALE or "en"
+end
+
+applyLocale(detectInitialLocale())
+
+local function pushLocaleToServer()
+	pcall(function()
+		C2S:FireServer({ action = "setLocale", locale = I18n.getLocale(), source = localeSource })
+	end)
+end
 
 local screen = UiKit.mk("ScreenGui", {
 	Name = "KanjiKombatUI",
@@ -13107,10 +13749,16 @@ local screen = UiKit.mk("ScreenGui", {
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 }, player:WaitForChild("PlayerGui"))
 
+local T = {} -- [name] = TextLabel (retranslate で一括更新)
+
+-- 先に宣言しておく (UI構築中のコールバックからも参照する)
+local renderLevelCards, renderStatus, renderProfile, renderHp
+local renderQuestion, renderPractice, renderResult, retranslate
+
 -- ================================================================ lobby
 local lobby = UiKit.mk("Frame", {
 	Name = "Lobby",
-	Size = UDim2.fromOffset(860, 620),
+	Size = UDim2.fromOffset(880, 700),
 	Position = UDim2.fromScale(0.5, 0.5),
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	BackgroundColor3 = COL_BG,
@@ -13120,40 +13768,62 @@ local lobby = UiKit.mk("Frame", {
 UiKit.corner(lobby, 18)
 UiKit.stroke(lobby, Color3.fromRGB(120, 60, 70), 2, 0.15)
 
-UiKit.label({
-	Size = UDim2.new(1, -40, 0, 56), Position = UDim2.fromOffset(20, 12),
-	Font = Enum.Font.GothamBold, Text = "漢字コンバット", TextColor3 = COL_GOLD,
+-- 小さい画面でも収まるようにスケール (モバイル対応)
+local lobbyScale = UiKit.mk("UIScale", { Scale = 1, Parent = lobby })
+local camera = workspace.CurrentCamera
+local function fitLobby()
+	local vp = camera and camera.ViewportSize or Vector2.new(1280, 720)
+	local s = math.min(vp.X / 920, vp.Y / 740)
+	lobbyScale.Scale = math.clamp(s, 0.5, 1)
+end
+fitLobby()
+if camera then
+	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fitLobby)
+end
+
+T.title = UiKit.label({
+	Size = UDim2.new(1, -220, 0, 52), Position = UDim2.fromOffset(100, 10),
+	Font = Enum.Font.GothamBlack, TextColor3 = COL_GOLD,
 }, lobby)
-UiKit.label({
+T.subtitle = UiKit.label({
 	Size = UDim2.new(1, -40, 0, 22), Position = UDim2.new(0, 20, 0, 64),
-	Font = Enum.Font.Gotham, TextColor3 = COL_DIM, Text = "読みオンリー対戦 〜 級を選んで対戦相手と即バトル！",
+	Font = Enum.Font.Gotham, TextColor3 = COL_DIM,
 }, lobby)
-
-local profileChip = UiKit.label({
-	Size = UDim2.new(0, 380, 0, 26), Position = UDim2.new(1, -400, 0, 16),
+T.levelsNote = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 18), Position = UDim2.new(0, 20, 0, 86),
+	Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(120, 120, 145),
+	TextSize = 14, TextScaled = false,
+}, lobby)
+T.profileChip = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 20), Position = UDim2.new(0, 20, 0, 110),
 	Font = Enum.Font.Gotham, TextColor3 = COL_TEXT, TextXAlignment = Enum.TextXAlignment.Right,
-	Text = "プロフィール読込中…",
+	TextSize = 15, TextScaled = false,
 }, lobby)
 
-local statusLabel = UiKit.label({
-	Size = UDim2.new(1, -40, 0, 30), Position = UDim2.new(0, 20, 1, -110),
-	Font = Enum.Font.Gotham, TextColor3 = COL_GOLD, Text = "",
+local langButton = UiKit.button({
+	Size = UDim2.fromOffset(160, 32), Position = UDim2.new(1, -180, 0, 12),
+	BackgroundColor3 = Color3.fromRGB(60, 70, 105), TextSize = 15, TextScaled = false,
 }, lobby)
 
-local levelCards = {} -- [key] = {frame, rating, queue}
+T.status = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 26), Position = UDim2.new(0, 20, 1, -124),
+	Font = Enum.Font.Gotham, TextColor3 = COL_GOLD, TextSize = 17, TextScaled = false,
+}, lobby)
+
+local levelCards = {} -- [key] = { frame, title, desc, rating, info, queue }
+local queueCounts = {}
+local selectedKey = nil
 
 local grid = UiKit.mk("Frame", {
-	Size = UDim2.new(1, -40, 1, -210), Position = UDim2.fromOffset(20, 96),
+	Size = UDim2.new(1, -40, 1, -250), Position = UDim2.fromOffset(20, 140),
 	BackgroundTransparency = 1,
 }, lobby)
 UiKit.mk("UIGridLayout", {
-	CellSize = UDim2.fromOffset(193, 118),
+	CellSize = UDim2.fromOffset(202, 126),
 	CellPadding = UDim2.fromOffset(9, 9),
 	SortOrder = Enum.SortOrder.LayoutOrder,
 	Parent = grid,
 })
-
-local selectedKey = nil
 
 local function buildLevelCards()
 	for i, lv in ipairs(Config.LEVELS) do
@@ -13170,24 +13840,25 @@ local function buildLevelCards()
 			BackgroundColor3 = col,
 			BorderSizePixel = 0,
 		}, card)
-		local lbl = UiKit.label({
-			Size = UDim2.new(1, -12, 0, 34), Position = UDim2.fromOffset(10, 10),
-			Text = lv.label, TextColor3 = col, TextXAlignment = Enum.TextXAlignment.Left,
+		local title = UiKit.label({
+			Size = UDim2.new(1, -20, 0, 28), Position = UDim2.fromOffset(10, 12),
+			TextColor3 = col, TextXAlignment = Enum.TextXAlignment.Left,
 		}, card)
-		UiKit.label({
-			Size = UDim2.new(1, -12, 0, 18), Position = UDim2.new(0, 10, 0, 44),
-			Font = Enum.Font.Gotham, TextColor3 = COL_DIM, Text = lv.desc,
-			TextXAlignment = Enum.TextXAlignment.Left,
+		local desc = UiKit.label({
+			Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 10, 0, 42),
+			Font = Enum.Font.Gotham, TextColor3 = COL_DIM,
+			TextSize = 13, TextScaled = false, TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
 		}, card)
-		local ratingLbl = UiKit.label({
-			Size = UDim2.new(1, -12, 0, 18), Position = UDim2.new(0, 10, 0, 64),
-			Font = Enum.Font.Gotham, TextColor3 = COL_TEXT, Text = "1000",
-			TextXAlignment = Enum.TextXAlignment.Left,
+		local rating = UiKit.label({
+			Size = UDim2.new(1, -20, 0, 18), Position = UDim2.new(0, 10, 0, 74),
+			Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT,
+			TextSize = 14, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left,
 		}, card)
-		local queueLbl = UiKit.label({
-			Size = UDim2.new(1, -12, 0, 18), Position = UDim2.new(0, 10, 0, 84),
-			Font = Enum.Font.Gotham, TextColor3 = COL_GOLD, Text = "漢字 " .. lv.kanji .. "字 / 1000問",
-			TextXAlignment = Enum.TextXAlignment.Left,
+		local info = UiKit.label({
+			Size = UDim2.new(1, -20, 0, 18), Position = UDim2.new(0, 10, 0, 96),
+			Font = Enum.Font.Gotham, TextColor3 = COL_GOLD,
+			TextSize = 13, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left,
 		}, card)
 		local btn = UiKit.mk("TextButton", {
 			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
@@ -13199,24 +13870,26 @@ local function buildLevelCards()
 				c.frame.BackgroundTransparency = isSel and 0.5 or 0
 				c.frame.BackgroundColor3 = isSel and Color3.fromRGB(70, 55, 90) or COL_CARD
 			end
-			statusLabel.Text = lv.label .. "（" .. lv.desc .. "）を選択中"
+			renderStatus()
 		end)
-		levelCards[lv.key] = { frame = card, rating = ratingLbl, queue = queueLbl }
+		levelCards[lv.key] = {
+			frame = card, title = title, desc = desc, rating = rating, info = info,
+		}
 	end
 end
 buildLevelCards()
 
 local battleButton = UiKit.button({
 	Size = UDim2.fromOffset(200, 46), Position = UDim2.new(0, 20, 1, -70),
-	BackgroundColor3 = Color3.fromRGB(170, 45, 60), Text = "対戦エントリー",
+	BackgroundColor3 = Color3.fromRGB(170, 45, 60),
 }, lobby)
 local practiceButton = UiKit.button({
 	Size = UDim2.fromOffset(140, 46), Position = UDim2.new(0, 232, 1, -70),
-	BackgroundColor3 = Color3.fromRGB(60, 110, 170), Text = "練習",
+	BackgroundColor3 = Color3.fromRGB(60, 110, 170),
 }, lobby)
 local cancelButton = UiKit.button({
 	Size = UDim2.fromOffset(140, 46), Position = UDim2.new(0, 384, 1, -70),
-	BackgroundColor3 = Color3.fromRGB(70, 70, 90), Text = "キャンセル", Visible = false,
+	BackgroundColor3 = Color3.fromRGB(70, 70, 90), Visible = false,
 }, lobby)
 
 -- ================================================================ battle
@@ -13227,33 +13900,51 @@ local battle = UiKit.mk("Frame", {
 
 local opName = UiKit.label({
 	Size = UDim2.fromOffset(360, 26), Position = UDim2.new(0.5, -180, 0, 18),
-	Font = Enum.Font.GothamBold, Text = "対戦相手",
+	Font = Enum.Font.GothamBold, Text = "",
 }, battle)
-local _, opFill = UiKit.hpBar(battle, UDim2.fromOffset(560, 22), UDim2.new(0.5, -280, 0, 50), COL_BAD, Vector2.new(0, 0))
-UiKit.label({ Size = UDim2.fromOffset(80, 22), Position = UDim2.new(0.5, -280, 0, 48), Font = Enum.Font.Gotham, TextColor3 = COL_DIM, Text = "相手HP", ZIndex = 3 }, battle)
+
+-- HPバー (名前 + 数値を内蔵)
+local function makeHpBar(size, position, color)
+	local holder, fill = UiKit.hpBar(battle, size, position, color, Vector2.new(0, 0))
+	local name = UiKit.label({
+		Size = UDim2.new(0.6, -16, 1, 0), Position = UDim2.fromOffset(12, 0),
+		Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(245, 245, 250),
+		TextSize = 14, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3,
+	}, holder)
+	local value = UiKit.label({
+		Size = UDim2.new(0.4, -18, 1, 0), Position = UDim2.new(0.6, 6, 0, 0),
+		Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(245, 245, 250),
+		TextSize = 14, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3,
+	}, holder)
+	return { holder = holder, fill = fill, name = name, value = value }
+end
+
+local opHp = makeHpBar(UDim2.fromOffset(560, 22), UDim2.new(0.5, -280, 0, 50), COL_BAD)
+local myHp = makeHpBar(UDim2.fromOffset(560, 24), UDim2.new(0.5, -280, 1, -76), COL_GOOD)
 
 local roundLbl = UiKit.label({
-	Size = UDim2.fromOffset(200, 30), Position = UDim2.new(0.5, -100, 0, 86),
-	Font = Enum.Font.GothamBold, TextColor3 = COL_DIM, Text = "ROUND 1/10",
+	Size = UDim2.fromOffset(300, 30), Position = UDim2.new(0.5, -150, 0, 82),
+	Font = Enum.Font.GothamBold, TextColor3 = COL_DIM, Text = "",
 }, battle)
 
 local promptCard = UiKit.mk("Frame", {
-	Size = UDim2.fromOffset(680, 190), Position = UDim2.new(0.5, -340, 0, 130),
+	Size = UDim2.fromOffset(680, 190), Position = UDim2.new(0.5, -340, 0, 126),
 	BackgroundColor3 = COL_CARD, BorderSizePixel = 0,
 }, battle)
 UiKit.corner(promptCard, 14)
 UiKit.stroke(promptCard, Color3.fromRGB(120, 90, 100), 2, 0.2)
 local promptText = UiKit.label({
-	Size = UDim2.new(1, -30, 1, -40), Position = UDim2.fromOffset(15, 8),
+	Size = UDim2.new(1, -30, 1, -46), Position = UDim2.fromOffset(15, 8),
 	Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT, Text = "",
 }, promptCard)
-UiKit.label({
-	Name = "Hint", Size = UDim2.new(1, -30, 0, 26), Position = UDim2.new(0, 15, 1, -32),
-	Font = Enum.Font.Gotham, TextColor3 = COL_DIM, Text = "読み方を選べ",
+local promptHint = UiKit.label({
+	Name = "Hint", Size = UDim2.new(1, -30, 0, 30), Position = UDim2.new(0, 15, 1, -38),
+	Font = Enum.Font.Gotham, TextColor3 = COL_DIM,
+	TextSize = 17, TextScaled = false, TextWrapped = true, Text = "",
 }, promptCard)
 
 local timerHolder = UiKit.mk("Frame", {
-	Size = UDim2.fromOffset(680, 12), Position = UDim2.new(0.5, -340, 0, 334),
+	Size = UDim2.fromOffset(680, 12), Position = UDim2.new(0.5, -340, 0, 330),
 	BackgroundColor3 = Color3.fromRGB(25, 25, 32), BorderSizePixel = 0,
 }, battle)
 UiKit.corner(timerHolder, 6)
@@ -13262,24 +13953,36 @@ local timerFill = UiKit.mk("Frame", {
 }, timerHolder)
 UiKit.corner(timerFill, 6)
 
+-- 選択肢: 英語UIでは ローマ字 (大) + かな (小) の2段表示
+local function makeChoiceButton(parent, position, size)
+	local btn = UiKit.button({
+		Size = size, Position = position, BackgroundColor3 = COL_BTN,
+	}, parent)
+	btn.Text = ""
+	local main = UiKit.label({
+		Size = UDim2.new(1, -20, 1, -8), Position = UDim2.new(0, 10, 0, 4),
+		Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT, ZIndex = 2, Text = "",
+	}, btn)
+	local sub = UiKit.label({
+		Size = UDim2.new(1, -20, 0, 18), Position = UDim2.new(0, 10, 1, -24),
+		Font = Enum.Font.Gotham, TextColor3 = COL_DIM,
+		TextSize = 15, TextScaled = false, ZIndex = 2, Visible = false, Text = "",
+	}, btn)
+	return { button = btn, main = main, sub = sub }
+end
+
 local choiceButtons = {}
 for i = 1, 4 do
 	local col = (i - 1) % 2
 	local row = math.floor((i - 1) / 2)
-	local b = UiKit.button({
-		Size = UDim2.fromOffset(330, 66),
-		Position = UDim2.new(0.5, -335 + col * 340, 0, 362 + row * 76),
-		BackgroundColor3 = Color3.fromRGB(45, 43, 60),
-		TextSize = 24,
-	}, battle)
-	choiceButtons[i] = b
+	choiceButtons[i] = makeChoiceButton(battle,
+		UDim2.new(0.5, -335 + col * 340, 0, 358 + row * 76),
+		UDim2.fromOffset(330, 66))
 end
 
-local myHpHolder, myFill = UiKit.hpBar(battle, UDim2.fromOffset(560, 24), UDim2.new(0.5, -280, 1, -76), COL_GOOD, Vector2.new(0, 0))
 local suddenLbl = UiKit.label({
-	Size = UDim2.fromOffset(400, 34), Position = UDim2.new(0.5, -200, 1, -120),
-	Font = Enum.Font.GothamBold, TextColor3 = COL_BAD, Text = "サドンデス！",
-	Visible = false,
+	Size = UDim2.fromOffset(400, 34), Position = UDim2.new(0.5, -200, 1, -122),
+	Font = Enum.Font.GothamBold, TextColor3 = COL_BAD, Visible = false,
 }, battle)
 
 -- ================================================================ practice
@@ -13287,46 +13990,48 @@ local prac = UiKit.mk("Frame", {
 	Name = "Practice", Visible = false, Size = UDim2.fromScale(1, 1),
 	BackgroundColor3 = COL_BG, BackgroundTransparency = 0.25, BorderSizePixel = 0,
 }, screen)
-UiKit.label({
-	Size = UDim2.fromOffset(400, 36), Position = UDim2.new(0.5, -200, 0, 24),
-	Font = Enum.Font.GothamBold, TextColor3 = COL_GOLD, Text = "練習モード",
+local pracTitle = UiKit.label({
+	Size = UDim2.fromOffset(600, 32), Position = UDim2.new(0.5, -300, 0, 20),
+	Font = Enum.Font.GothamBold, TextColor3 = COL_GOLD, Text = "",
+}, prac)
+local pracSub = UiKit.label({
+	Size = UDim2.fromOffset(600, 20), Position = UDim2.new(0.5, -300, 0, 54),
+	Font = Enum.Font.Gotham, TextColor3 = COL_DIM, TextSize = 14, TextScaled = false, Text = "",
 }, prac)
 local pracStreak = UiKit.label({
-	Size = UDim2.fromOffset(400, 28), Position = UDim2.new(0.5, -200, 0, 60),
-	Font = Enum.Font.Gotham, TextColor3 = COL_TEXT, Text = "連続正解 0",
+	Size = UDim2.fromOffset(600, 26), Position = UDim2.new(0.5, -300, 0, 78),
+	Font = Enum.Font.Gotham, TextColor3 = COL_TEXT, TextSize = 18, TextScaled = false, Text = "",
 }, prac)
 local pracCard = UiKit.mk("Frame", {
-	Size = UDim2.fromOffset(680, 170), Position = UDim2.new(0.5, -340, 0, 120),
+	Size = UDim2.fromOffset(680, 160), Position = UDim2.new(0.5, -340, 0, 116),
 	BackgroundColor3 = COL_CARD, BorderSizePixel = 0,
 }, prac)
 UiKit.corner(pracCard, 14)
 local pracText = UiKit.label({
 	Size = UDim2.new(1, -30, 1, -20), Position = UDim2.fromOffset(15, 10),
-	Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT,
+	Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT, Text = "",
 }, pracCard)
 local pracChoices = {}
 for i = 1, 4 do
 	local col = (i - 1) % 2
 	local row = math.floor((i - 1) / 2)
-	local b = UiKit.button({
-		Size = UDim2.fromOffset(330, 64),
-		Position = UDim2.new(0.5, -335 + col * 340, 0, 310 + row * 74),
-		BackgroundColor3 = Color3.fromRGB(45, 43, 60),
-	}, prac)
-	pracChoices[i] = b
+	pracChoices[i] = makeChoiceButton(prac,
+		UDim2.new(0.5, -335 + col * 340, 0, 300 + row * 74),
+		UDim2.fromOffset(330, 64))
 end
 local pracFeedback = UiKit.label({
-	Size = UDim2.fromOffset(600, 40), Position = UDim2.new(0.5, -300, 0, 470),
-	Font = Enum.Font.GothamBold, TextColor3 = COL_GOOD, Text = "",
+	Size = UDim2.fromOffset(680, 46), Position = UDim2.new(0.5, -340, 0, 452),
+	Font = Enum.Font.GothamBold, TextColor3 = COL_GOOD,
+	TextSize = 19, TextScaled = false, TextWrapped = true, Text = "",
 }, prac)
 local pracExit = UiKit.button({
-	Size = UDim2.fromOffset(160, 44), Position = UDim2.new(0.5, -80, 1, -70),
-	BackgroundColor3 = Color3.fromRGB(70, 70, 90), Text = "練習をやめる",
+	Size = UDim2.fromOffset(180, 44), Position = UDim2.new(0.5, -90, 1, -70),
+	BackgroundColor3 = Color3.fromRGB(70, 70, 90),
 }, prac)
 
 -- ================================================================ result / overlay
 local result = UiKit.mk("Frame", {
-	Name = "Result", Visible = false, Size = UDim2.fromOffset(460, 260),
+	Name = "Result", Visible = false, Size = UDim2.fromOffset(480, 280),
 	Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
 	BackgroundColor3 = COL_CARD, BorderSizePixel = 0, ZIndex = 5,
 }, screen)
@@ -13334,19 +14039,20 @@ UiKit.corner(result, 16)
 UiKit.stroke(result, COL_GOLD, 2, 0.2)
 local resultTitle = UiKit.label({
 	Size = UDim2.new(1, -30, 0, 80), Position = UDim2.fromOffset(15, 20),
-	Font = Enum.Font.GothamBlack, Text = "WIN！", ZIndex = 6,
+	Font = Enum.Font.GothamBlack, Text = "", ZIndex = 6,
 }, result)
 local resultDetail = UiKit.label({
-	Size = UDim2.new(1, -30, 0, 70), Position = UDim2.new(0, 15, 0, 105),
-	Font = Enum.Font.Gotham, TextColor3 = COL_TEXT, Text = "", ZIndex = 6,
+	Size = UDim2.new(1, -30, 0, 90), Position = UDim2.new(0, 15, 0, 108),
+	Font = Enum.Font.Gotham, TextColor3 = COL_TEXT,
+	TextSize = 17, TextScaled = false, TextWrapped = true, Text = "", ZIndex = 6,
 }, result)
 local resultOk = UiKit.button({
 	Size = UDim2.fromOffset(180, 46), Position = UDim2.new(0.5, -90, 1, -62),
-	BackgroundColor3 = Color3.fromRGB(170, 45, 60), Text = "ロビーへ", ZIndex = 6,
+	BackgroundColor3 = Color3.fromRGB(170, 45, 60), ZIndex = 6,
 }, result)
 
 local toastLbl = UiKit.label({
-	Size = UDim2.fromOffset(520, 34), Position = UDim2.new(0.5, -260, 0, 120),
+	Size = UDim2.fromOffset(600, 34), Position = UDim2.new(0.5, -300, 0, 110),
 	Font = Enum.Font.GothamBold, TextColor3 = COL_GOLD,
 	BackgroundTransparency = 1, Text = "", ZIndex = 10,
 }, screen)
@@ -13355,20 +14061,296 @@ local function toast(msg)
 	toastToken = toastToken + 1
 	local my = toastToken
 	toastLbl.Text = msg
-	task.delay(2.6, function()
+	task.delay(2.8, function()
 		if toastToken == my then
 			toastLbl.Text = ""
 		end
 	end)
 end
 
--- ================================================================ state helpers
+
+-- ================================================================ title splash
+-- 起動時に言語に応じたタイトルを見せる (英語圏では "KANJI KOMBAT" がメイン)
+local splash = UiKit.mk("Frame", {
+	Name = "TitleSplash", Size = UDim2.fromScale(1, 1),
+	BackgroundColor3 = Color3.fromRGB(12, 10, 16), BackgroundTransparency = 0.02,
+	BorderSizePixel = 0, ZIndex = 20,
+}, screen)
+local splashTitle = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 130), Position = UDim2.new(0, 20, 0.5, -180),
+	Font = Enum.Font.GothamBlack, TextColor3 = COL_GOLD, ZIndex = 21,
+}, splash)
+local splashSub = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 34), Position = UDim2.new(0, 20, 0.5, -30),
+	Font = Enum.Font.Gotham, TextColor3 = COL_TEXT,
+	TextSize = 20, TextScaled = false, ZIndex = 21,
+}, splash)
+local splashNote = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 26), Position = UDim2.new(0, 20, 0.5, 20),
+	Font = Enum.Font.Gotham, TextColor3 = COL_DIM,
+	TextSize = 16, TextScaled = false, ZIndex = 21,
+}, splash)
+local splashHint = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 26), Position = UDim2.new(0, 20, 1, -80),
+	Font = Enum.Font.Gotham, TextColor3 = COL_DIM,
+	TextSize = 16, TextScaled = false, ZIndex = 21,
+}, splash)
+local splashClick = UiKit.mk("TextButton", {
+	Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 21,
+}, splash)
+
+local splashGone = false
+local function hideSplash()
+	if splashGone then
+		return
+	end
+	splashGone = true
+	local tw = TweenService:Create(splash, TweenInfo.new(0.5), { BackgroundTransparency = 1 })
+	tw:Play()
+	for _, lbl in ipairs({ splashTitle, splashSub, splashNote, splashHint }) do
+		TweenService:Create(lbl, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+	end
+	task.delay(0.55, function()
+		splash.Visible = false
+	end)
+end
+splashClick.MouseButton1Click:Connect(hideSplash)
+task.delay(4, hideSplash)
+
+local function renderSplash()
+	splashTitle.Text = I18n.t("title")
+	splashSub.Text = I18n.t("splashSubtitle")
+	splashNote.Text = I18n.t(localeSource == "manual" and "languageChanged" or "languageChangedAuto")
+	splashHint.Text = I18n.t("titleStart")
+end
+
+-- ================================================================ state
 local profile = nil
 local curRound = 0
 local answerLocked = false
 local practiceLocked = false
-local lastPracChoices = nil
 local queueing = false
+local curQ = nil        -- 現在の対戦問題 (言語切替時の再描画用)
+local curAnswer = nil   -- 直近の正誤結果
+local curPracQ = nil
+local curPracResult = nil
+local curResultData = nil
+local pracLevelKey = nil
+local pracStreakValue = 0
+local hpMe, hpOp = Config.MAX_HP, Config.MAX_HP
+
+-- ================================================================ text helpers
+local function setChoiceText(choice, primary, secondary)
+	choice.button.Text = ""
+	choice.main.Text = primary
+	choice.sub.Text = secondary or ""
+	if secondary and secondary ~= "" then
+		choice.main.Size = UDim2.new(1, -20, 0, 34)
+		choice.main.Position = UDim2.new(0, 10, 0, 6)
+		choice.sub.Visible = true
+	else
+		choice.main.Size = UDim2.new(1, -20, 1, -8)
+		choice.main.Position = UDim2.new(0, 10, 0, 4)
+		choice.sub.Visible = false
+	end
+end
+
+local function resetChoiceColors(list)
+	for _, c in ipairs(list) do
+		c.button.AutoButtonColor = true
+		c.button.BackgroundColor3 = COL_BTN
+		c.sub.TextColor3 = COL_DIM
+	end
+end
+
+-- かな1つ分のローマ字 (英語UI用)
+local function romaji(kana)
+	return Romaji.convert(kana)
+end
+
+-- 選択肢4つ分のローマ字 (じ/ぢ など、同じ表記になる場合は自動で別表記にする)
+local function romajiList(list)
+	local kana = {}
+	for i = 1, 4 do
+		kana[i] = (list and list[i]) or ""
+	end
+	return Romaji.convertMany(kana)
+end
+
+local function readingText(kana)
+	if I18n.getLocale() == "en" then
+		return I18n.reading(kana, romaji(kana))
+	end
+	return kana
+end
+
+function renderLevelCards()
+	for key, card in pairs(levelCards) do
+		card.title.Text = I18n.levelTitle(key)
+		card.desc.Text = I18n.levelDesc(key)
+		local lv = Config.levelByKey(key)
+		local n = queueCounts[key] or 0
+		if n &gt; 0 then
+			card.info.Text = I18n.t("levelQueue", { n = n })
+			card.info.TextColor3 = COL_GOOD
+		else
+			card.info.Text = I18n.t("levelInfo", { kanji = lv and lv.kanji or 0 })
+			card.info.TextColor3 = COL_GOLD
+		end
+		local r = (profile and profile.ratings and profile.ratings[key]) or Config.DEFAULT_RATING
+		card.rating.Text = I18n.t("rating", { rating = r })
+	end
+end
+
+function renderStatus()
+	if not selectedKey then
+		T.status.Text = ""
+		return
+	end
+	T.status.Text = I18n.t("selected", {
+		level = I18n.levelTitle(selectedKey),
+		desc = I18n.levelDesc(selectedKey),
+	})
+end
+
+function renderProfile()
+	if not profile then
+		T.profileChip.Text = I18n.t("profileLoading")
+		return
+	end
+	T.profileChip.Text = I18n.t("profileStats", {
+		wins = profile.wins or 0,
+		losses = profile.losses or 0,
+		streak = profile.streak or 0,
+	})
+end
+
+function renderHp()
+	opHp.name.Text = I18n.t("opponentLabel")
+	myHp.name.Text = I18n.t("myHpLabel")
+	opHp.value.Text = hpOp .. " / " .. Config.MAX_HP
+	myHp.value.Text = hpMe .. " / " .. Config.MAX_HP
+end
+
+function renderQuestion()
+	if not curQ then
+		return
+	end
+	promptText.Text = curQ.isKanji and ("『" .. curQ.prompt .. "』") or curQ.prompt
+	local readings = {}
+	if I18n.getLocale() == "en" then
+		readings = romajiList(curQ.choices) -- じ/ぢ などが同じ表記にならないように
+	end
+	for i, choice in ipairs(choiceButtons) do
+		local kana = curQ.choices[i] or ""
+		if I18n.getLocale() == "en" then
+			setChoiceText(choice, readings[i] or romaji(kana), kana)
+		else
+			setChoiceText(choice, kana, nil)
+		end
+	end
+	if curAnswer then
+		local kana = curQ.choices[curAnswer.correctIdx] or "?"
+		if curAnswer.correct then
+			promptHint.TextColor3 = COL_GOOD
+			promptHint.Text = I18n.t("answerCorrect", { dealt = curAnswer.dealt or 0 })
+		else
+			promptHint.TextColor3 = COL_BAD
+			promptHint.Text = I18n.t("answerWrong", { answer = readingText(kana) })
+		end
+	else
+		promptHint.TextColor3 = COL_DIM
+		promptHint.Text = I18n.t(curQ.isKanji and "hintKanji" or "hintWord")
+	end
+	roundLbl.Text = I18n.t("roundLabel", { round = curQ.round, total = curQ.total })
+end
+
+function renderPractice()
+	pracTitle.Text = I18n.t("practiceTitle")
+		.. (pracLevelKey and (" · " .. I18n.levelTitle(pracLevelKey)) or "")
+	pracSub.Text = I18n.t("practiceSubtitle")
+	pracStreak.Text = I18n.t("practiceStreak", { streak = pracStreakValue })
+	if not curPracQ then
+		return
+	end
+	pracText.Text = curPracQ.isKanji and ("『" .. curPracQ.prompt .. "』") or curPracQ.prompt
+	local readings = {}
+	if I18n.getLocale() == "en" then
+		readings = romajiList(curPracQ.choices)
+	end
+	for i, choice in ipairs(pracChoices) do
+		local kana = curPracQ.choices[i] or ""
+		if I18n.getLocale() == "en" then
+			setChoiceText(choice, readings[i] or romaji(kana), kana)
+		else
+			setChoiceText(choice, kana, nil)
+		end
+	end
+	if curPracResult then
+		local kana = curPracQ.choices[curPracResult.correctIdx] or "?"
+		if curPracResult.correct then
+			pracFeedback.TextColor3 = COL_GOOD
+			pracFeedback.Text = I18n.t("practiceCorrect", { answer = readingText(kana) })
+		else
+			pracFeedback.TextColor3 = COL_BAD
+			pracFeedback.Text = I18n.t("practiceWrong", { answer = readingText(kana) })
+		end
+	end
+end
+
+function renderResult()
+	if not curResultData then
+		return
+	end
+	local d = curResultData
+	if d.draw then
+		resultTitle.Text = I18n.t("resultDraw")
+		resultTitle.TextColor3 = COL_DIM
+		resultDetail.Text = I18n.t("resultDetailDraw")
+		return
+	end
+	local reason = I18n.t(d.reason == "leave" and "reasonLeave" or (d.reason == "KO" and "reasonKill" or "reasonMatch"))
+	local delta = d.delta or 0
+	resultTitle.Text = I18n.t(d.win and "resultWin" or "resultLose")
+	resultTitle.TextColor3 = d.win and COL_GOLD or COL_BAD
+	resultDetail.Text = I18n.t("resultDetail", {
+		opponent = d.opponent or "?",
+		reason = reason,
+		before = (d.rating or Config.DEFAULT_RATING) - delta,
+		after = d.rating or Config.DEFAULT_RATING,
+		delta = string.format("%+d", delta),
+		wins = d.wins or 0,
+		losses = d.losses or 0,
+	})
+end
+
+-- 言語が変わったときに呼ぶ (静的テキスト + 動的表示をまとめて再構築)
+function retranslate()
+	T.title.Text = I18n.t("title")
+	T.subtitle.Text = I18n.t("subtitle")
+	T.levelsNote.Text = I18n.t("levelsNote")
+	langButton.Text = I18n.t("languageButton")
+	battleButton.Text = I18n.t("battleButton")
+	practiceButton.Text = I18n.t("practiceButton")
+	cancelButton.Text = I18n.t("cancelButton")
+	pracExit.Text = I18n.t("practiceExit")
+	resultOk.Text = I18n.t("backToLobby")
+	suddenLbl.Text = I18n.t("suddenDeath")
+	if not curQ then
+		roundLbl.Text = I18n.t("preparing")
+	end
+	if queueing then
+		T.status.Text = I18n.t("searching")
+	end
+	renderSplash()
+	renderLevelCards()
+	renderStatus()
+	renderProfile()
+	renderHp()
+	renderQuestion()
+	renderPractice()
+	renderResult()
+end
 
 local function refreshProfile()
 	task.spawn(function()
@@ -13377,13 +14359,20 @@ local function refreshProfile()
 		end)
 		if ok and type(p) == "table" then
 			profile = p
-			if profile.wins then
-				profileChip.Text = string.format("通算 %d勝 %d敗　連続 %d", profile.wins, profile.losses or 0, profile.streak or 0)
+			renderProfile()
+			renderLevelCards()
+			-- 保存された手動設定があれば自動判定より優先する
+			if localeSource == "auto" and type(p.locale) == "string" and p.locale ~= "" then
+				serverLocale = I18n.localeFromId(p.locale)
+				if serverLocale ~= I18n.getLocale() then
+					localeSource = "manual"
+					applyLocale(serverLocale)
+					retranslate()
+					toast(I18n.t("languageChanged"))
+					return
+				end
 			end
-			for key, card in pairs(levelCards) do
-				local r = (profile.ratings and profile.ratings[key]) or 1000
-				card.rating.Text = "レート " .. tostring(r)
-			end
+			pushLocaleToServer() -- 端末ロケールをサーバーにも伝える (leaderstats の表記用)
 		end
 	end)
 end
@@ -13393,6 +14382,11 @@ local function setQueueing(v)
 	battleButton.Visible = not v
 	practiceButton.Visible = not v
 	cancelButton.Visible = v
+	if v then
+		T.status.Text = I18n.t("searching")
+	elseif not selectedKey then
+		T.status.Text = ""
+	end
 end
 
 local function showLobby()
@@ -13403,14 +14397,37 @@ local function showLobby()
 	refreshProfile()
 end
 
--- ---------------------------------------------------------- battle flow
-local function setChoicesEnabled(list, enabled)
-	for _, b in ipairs(list) do
-		b.AutoButtonColor = enabled
-		b.BackgroundColor3 = Color3.fromRGB(45, 43, 60)
+-- ================================================================ language toggle
+langButton.MouseButton1Click:Connect(function()
+	local nextLocale = I18n.otherLocale(I18n.getLocale())
+	localeSource = "manual"
+	serverLocale = nextLocale
+	applyLocale(nextLocale)
+	retranslate()
+	toast(I18n.t("languageChanged"))
+	pushLocaleToServer()
+end)
+
+-- 端末の言語設定が変わったら (自動判定モードのときだけ) 追従する
+local function onSystemLocaleChanged()
+	if localeSource ~= "auto" then
+		return
+	end
+	local code = I18n.detectLocale()
+	if code and code ~= I18n.getLocale() then
+		applyLocale(code)
+		retranslate()
+		toast(I18n.t("languageChangedAuto"))
 	end
 end
+pcall(function()
+	player:GetPropertyChangedSignal("LocaleId"):Connect(onSystemLocaleChanged)
+end)
+pcall(function()
+	LocalizationService:GetPropertyChangedSignal("RobloxLocaleId"):Connect(onSystemLocaleChanged)
+end)
 
+-- ================================================================ battle flow
 local function startTimer(seconds)
 	timerFill.Size = UDim2.fromScale(1, 1)
 	timerFill.BackgroundColor3 = COL_GOLD
@@ -13418,42 +14435,34 @@ local function startTimer(seconds)
 	tween:Play()
 end
 
-local function showQuestion(data, choicesButtons, promptLabel)
-	promptLabel.Text = data.prompt
-	if data.isKanji then
-		promptLabel.Text = "『" .. data.prompt .. "』"
-	end
-	for i, b in ipairs(choicesButtons) do
-		b.Text = data.choices[i]
-		b.BackgroundColor3 = Color3.fromRGB(45, 43, 60)
-	end
-	setChoicesEnabled(choicesButtons, true)
-end
-
 battleButton.MouseButton1Click:Connect(function()
 	if not selectedKey then
-		toast("級を選んでね！")
+		toast(I18n.t("pickLevel"))
 		return
 	end
 	C2S:FireServer({ action = "queue", levelKey = selectedKey })
 	setQueueing(true)
-	statusLabel.Text = "マッチング中…"
 end)
 practiceButton.MouseButton1Click:Connect(function()
 	if not selectedKey then
-		toast("級を選んでね！")
+		toast(I18n.t("pickLevel"))
 		return
 	end
 	C2S:FireServer({ action = "practiceStart", levelKey = selectedKey })
+	pracLevelKey = selectedKey
+	pracStreakValue = 0
+	curPracQ = nil
+	curPracResult = nil
+	pracFeedback.Text = ""
 	lobby.Visible = false
 	prac.Visible = true
 	practiceLocked = false
-	pracFeedback.Text = ""
+	renderPractice()
 end)
 cancelButton.MouseButton1Click:Connect(function()
 	C2S:FireServer({ action = "cancelQueue" })
 	setQueueing(false)
-	statusLabel.Text = ""
+	T.status.Text = ""
 end)
 pracExit.MouseButton1Click:Connect(function()
 	C2S:FireServer({ action = "practiceStop" })
@@ -13465,24 +14474,24 @@ resultOk.MouseButton1Click:Connect(function()
 	showLobby()
 end)
 
-for i, b in ipairs(choiceButtons) do
-	b.MouseButton1Click:Connect(function()
+for i, choice in ipairs(choiceButtons) do
+	choice.button.MouseButton1Click:Connect(function()
 		if answerLocked then
 			return
 		end
 		answerLocked = true
 		C2S:FireServer({ action = "submit", round = curRound, idx = i })
-		b.BackgroundColor3 = Color3.fromRGB(90, 80, 130)
+		choice.button.BackgroundColor3 = Color3.fromRGB(90, 80, 130)
 	end)
 end
-for i, b in ipairs(pracChoices) do
-	b.MouseButton1Click:Connect(function()
+for i, choice in ipairs(pracChoices) do
+	choice.button.MouseButton1Click:Connect(function()
 		if practiceLocked then
 			return
 		end
 		practiceLocked = true
 		C2S:FireServer({ action = "practiceSubmit", idx = i })
-		b.BackgroundColor3 = Color3.fromRGB(90, 80, 130)
+		choice.button.BackgroundColor3 = Color3.fromRGB(90, 80, 130)
 	end)
 end
 
@@ -13492,6 +14501,21 @@ local function setHp(fill, hp, maxHp)
 end
 
 -- ================================================================ S2C router
+local function localizeArgs(args)
+	if type(args) ~= "table" then
+		return args
+	end
+	local out = {}
+	for k, v in pairs(args) do
+		if k == "level" and type(v) == "string" then
+			out[k] = I18n.levelFull(v)
+		else
+			out[k] = v
+		end
+	end
+	return out
+end
+
 S2C.OnClientEvent:Connect(function(data)
 	if type(data) ~= "table" or type(data.action) ~= "string" then
 		return
@@ -13499,18 +14523,17 @@ S2C.OnClientEvent:Connect(function(data)
 	local a = data.action
 
 	if a == "queue" then
-		for key, card in pairs(levelCards) do
-			local n = data[key] or 0
-			if n &gt; 0 then
-				card.queue.Text = "対戦待ち " .. n .. "人"
-			else
-				local lv = Config.levelByKey(key)
-				card.queue.Text = "漢字 " .. lv.kanji .. "字 / 1000問"
-			end
+		for key in pairs(levelCards) do
+			queueCounts[key] = data[key] or 0
 		end
+		renderLevelCards()
 
 	elseif a == "toast" then
-		toast(data.msg or "")
+		if data.key then
+			toast(I18n.t(data.key, localizeArgs(data.args)))
+		else
+			toast(data.msg or "")
+		end
 
 	elseif a == "matchIntro" then
 		lobby.Visible = false
@@ -13518,16 +14541,24 @@ S2C.OnClientEvent:Connect(function(data)
 		result.Visible = false
 		battle.Visible = true
 		setQueueing(false)
-		statusLabel.Text = ""
+		T.status.Text = ""
 		answerLocked = false
+		curQ = nil
+		curAnswer = nil
 		opName.Text = "VS " .. (data.opponent or "?")
-		roundLbl.Text = "準備中…"
-		promptText.Text = Config.GAME_NAME
+		roundLbl.Text = I18n.t("preparing")
+		promptText.Text = I18n.t("title")
+		promptHint.TextColor3 = COL_DIM
+		promptHint.Text = data.levelKey and I18n.levelFull(data.levelKey) or ""
 		suddenLbl.Visible = false
-		setChoicesEnabled(choiceButtons, false)
-		for i, b in ipairs(choiceButtons) do
-			b.Text = ""
+		for _, choice in ipairs(choiceButtons) do
+			setChoiceText(choice, "", nil)
+			choice.button.AutoButtonColor = false
 		end
+		hpMe, hpOp = Config.MAX_HP, Config.MAX_HP
+		renderHp()
+		setHp(myHp.fill, hpMe, Config.MAX_HP)
+		setHp(opHp.fill, hpOp, Config.MAX_HP)
 		task.wait(0.1)
 		UiKit.playSound("rbxasset://sounds/bass.mp3", 0.8, 0.5)
 
@@ -13537,25 +14568,41 @@ S2C.OnClientEvent:Connect(function(data)
 		curRound = data.round
 		answerLocked = false
 		practiceLocked = true
-		roundLbl.Text = data.sudden and "サドンデス" or (("ROUND %d/%d"):format(data.round, data.total))
+		curAnswer = nil
+		curQ = {
+			prompt = data.prompt,
+			isKanji = data.isKanji,
+			choices = data.choices,
+			round = data.round,
+			total = data.total,
+			sudden = data.sudden,
+		}
 		suddenLbl.Visible = data.sudden == true
-		showQuestion(data, choiceButtons, promptText)
-		startTimer(data.timeLimit or 12)
-		setHp(myFill, data.hpMe, Config.MAX_HP)
-		setHp(opFill, data.hpOp, Config.MAX_HP)
+		hpMe, hpOp = data.hpMe, data.hpOp
+		renderHp()
+		setHp(myHp.fill, hpMe, Config.MAX_HP)
+		setHp(opHp.fill, hpOp, Config.MAX_HP)
+		resetChoiceColors(choiceButtons)
+		renderQuestion()
+		startTimer(data.timeLimit or Config.QUESTION_TIME)
 		UiKit.playSound("rbxasset://sounds/electronicpingshort.wav", 1.6, 0.3)
 
 	elseif a == "answerResult" then
-		local myBtn = nil
-		local correctBtn = nil
-		for i, b in ipairs(choiceButtons) do
-			b.AutoButtonColor = false
+		curAnswer = {
+			correct = data.correct,
+			correctIdx = data.correctIdx,
+			myIdx = data.myIdx,
+			dealt = data.dealt,
+			taken = data.taken,
+		}
+		for i, choice in ipairs(choiceButtons) do
+			choice.button.AutoButtonColor = false
 			if i == data.correctIdx then
-				correctBtn = b
-				b.BackgroundColor3 = COL_GOOD
+				choice.button.BackgroundColor3 = COL_GOOD
+				choice.sub.TextColor3 = Color3.fromRGB(215, 255, 225)
 			elseif i == data.myIdx and data.myIdx &gt; 0 then
-				b.BackgroundColor3 = COL_BAD
-				myBtn = b
+				choice.button.BackgroundColor3 = COL_BAD
+				choice.sub.TextColor3 = Color3.fromRGB(255, 215, 220)
 			end
 		end
 		if data.correct then
@@ -13563,33 +14610,18 @@ S2C.OnClientEvent:Connect(function(data)
 		else
 			UiKit.playSound("rbxasset://sounds/snap.mp3", 1, 0.7)
 		end
-		setHp(myFill, data.hpMe, Config.MAX_HP)
-		setHp(opFill, data.hpOp, Config.MAX_HP)
-		task.delay(1.4, function()
-			for _, b in ipairs(choiceButtons) do
-				b.BackgroundColor3 = Color3.fromRGB(45, 43, 60)
-			end
-		end)
+		hpMe, hpOp = data.hpMe, data.hpOp
+		renderHp()
+		setHp(myHp.fill, hpMe, Config.MAX_HP)
+		setHp(opHp.fill, hpOp, Config.MAX_HP)
+		renderQuestion()
 
 	elseif a == "matchEnd" then
 		battle.Visible = false
 		result.Visible = true
+		curResultData = data
+		renderResult()
 		UiKit.playSound("rbxasset://sounds/bass.mp3", data.win and 1.3 or 0.7, 0.6)
-		if data.draw then
-			resultTitle.Text = "DRAW"
-			resultTitle.TextColor3 = COL_DIM
-			resultDetail.Text = "引き分け"
-		else
-			resultTitle.Text = data.win and "WIN！" or "LOSE…"
-			resultTitle.TextColor3 = data.win and COL_GOLD or COL_BAD
-			local delta = data.delta or 0
-			resultDetail.Text = string.format(
-				"VS %s（%s）\nレート %d → %d（%+d）\n通算 %d勝 %d敗",
-				data.opponent or "?", data.reason == "leave" and "不戦勝" or "対戦",
-				(data.rating or 1000) - delta, data.rating or 1000, delta,
-				data.wins or 0, data.losses or 0
-			)
-		end
 
 	elseif a == "toLobby" then
 		result.Visible = false
@@ -13598,39 +14630,47 @@ S2C.OnClientEvent:Connect(function(data)
 
 	elseif a == "practiceQ" then
 		practiceLocked = false
+		curPracResult = nil
 		pracFeedback.Text = ""
-		pracStreak.Text = "連続正解 " .. (data.streak or 0)
-		lastPracChoices = data.choices
-		showQuestion(data, pracChoices, pracText)
+		pracStreakValue = data.streak or 0
+		pracLevelKey = data.levelKey or pracLevelKey
+		curPracQ = {
+			prompt = data.prompt,
+			isKanji = data.isKanji,
+			choices = data.choices,
+		}
+		resetChoiceColors(pracChoices)
+		renderPractice()
 		UiKit.playSound("rbxasset://sounds/electronicpingshort.wav", 1.7, 0.25)
 
 	elseif a == "practiceResult" then
 		practiceLocked = true
-		if data.correct then
-			UiKit.playSound("rbxasset://sounds/electronicpingshort.wav", 1.2, 0.6)
-			pracFeedback.TextColor3 = COL_GOOD
-			pracFeedback.Text = "正解！"
-		else
-			UiKit.playSound("rbxasset://sounds/snap.mp3", 1, 0.7)
-			pracFeedback.TextColor3 = COL_BAD
-			pracFeedback.Text = "はずれ… 正解は「" .. ((lastPracChoices and lastPracChoices[data.correctIdx]) or "?") .. "」"
-		end
-		for i, b in ipairs(pracChoices) do
-			b.AutoButtonColor = false
+		curPracResult = { correct = data.correct, correctIdx = data.correctIdx }
+		pracStreakValue = data.streak or 0
+		for i, choice in ipairs(pracChoices) do
+			choice.button.AutoButtonColor = false
 			if i == data.correctIdx then
-				b.BackgroundColor3 = COL_GOOD
+				choice.button.BackgroundColor3 = COL_GOOD
+				choice.sub.TextColor3 = Color3.fromRGB(215, 255, 225)
 			end
 		end
+		if data.correct then
+			UiKit.playSound("rbxasset://sounds/electronicpingshort.wav", 1.2, 0.6)
+		else
+			UiKit.playSound("rbxasset://sounds/snap.mp3", 1, 0.7)
+		end
+		renderPractice()
 		if not data.correct then
-			task.delay(1.8, function()
+			task.delay(2.0, function()
 				C2S:FireServer({ action = "practiceNext" })
 			end)
 		end
 	end
 end)
 
+retranslate()
 showLobby()
-</ProtectedString></Properties></Item><Item class="Folder" referent="RBX26"><Properties><string name="Name">ClientModules</string></Properties><Item class="ModuleScript" referent="RBX25"><Properties><string name="Name">UiKit</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item><Item class="Folder" referent="RBX28"><Properties><string name="Name">ClientModules</string></Properties><Item class="ModuleScript" referent="RBX27"><Properties><string name="Name">UiKit</string><ProtectedString name="Source">--!nonstrict
 -- UI構築ヘルパー
 local UiKit = {}
 

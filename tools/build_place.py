@@ -10,6 +10,8 @@ from xml.sax.saxutils import escape
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
+SHARED = os.path.join(SRC, 'shared')
+CLIENT_MODULES = os.path.join(SRC, 'client', 'Modules')
 OUT = os.path.join(ROOT, 'KanjiKombat.rbxlx')
 
 
@@ -44,8 +46,12 @@ def folder(name, children):
 
 
 def build():
-    # ----- ReplicatedStorage
-    shared = folder('KKShared', script_item('ModuleScript', 'GameConfig', 'src/shared/GameConfig.luau'))
+    # ----- ReplicatedStorage (src/shared/*.luau を全部 KKShared に入れる)
+    shared_files = sorted(f for f in os.listdir(SHARED) if f.endswith('.luau'))
+    shared = folder('KKShared', ''.join(
+        script_item('ModuleScript', f[:-5], 'src/shared/%s' % f)
+        for f in shared_files
+    ))
     replicated = item('ReplicatedStorage', 'ReplicatedStorage', children=shared)
 
     # ----- ServerScriptService
@@ -65,7 +71,11 @@ def build():
     sss = item('ServerScriptService', 'ServerScriptService', children=main_with_children)
 
     # ----- StarterPlayer
-    client_modules = folder('ClientModules', script_item('ModuleScript', 'UiKit', 'src/client/Modules/UiKit.luau'))
+    client_files = sorted(f for f in os.listdir(CLIENT_MODULES) if f.endswith('.luau'))
+    client_modules = folder('ClientModules', ''.join(
+        script_item('ModuleScript', f[:-5], 'src/client/Modules/%s' % f)
+        for f in client_files
+    ))
     sps = item('StarterPlayerScripts', 'StarterPlayerScripts', children=(
         script_item('LocalScript', 'KanjiKombatClient', 'src/client/KanjiKombatClient.client.luau') + client_modules
     ))
