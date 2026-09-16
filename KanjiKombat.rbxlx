@@ -668,6 +668,15 @@ MatchService.init({
 	C2S = C2S,
 })
 
+-- クライアントからの操作 (対戦エントリー / 回答 / 練習モード) を受け取る。
+-- ここを繋がないとサーバーは何も受信せず、練習モードは問題が1問も出ない。
+C2S.OnServerEvent:Connect(function(player, data)
+	local ok, err = pcall(MatchService.onRemote, player, data)
+	if not ok then
+		warn("[MatchService] onRemote: " .. tostring(err))
+	end
+end)
+
 -- ------------------------------------------------- profile plumbing
 local function sanitizeProfile(profile)
 	local ratings = {}
@@ -1538,6 +1547,9 @@ function MatchService.practiceSubmit(player, idx)
 	local st = practice[player]
 	if not st or not st.active then
 		return
+	end
+	if not st.correct then
+		return -- まだ問題を出していない (最初の practiceQ が届く前のクリック)
 	end
 	local ok = (idx == st.correct)
 	if ok then
@@ -14456,7 +14468,7 @@ practiceButton.MouseButton1Click:Connect(function()
 	pracFeedback.Text = ""
 	lobby.Visible = false
 	prac.Visible = true
-	practiceLocked = false
+	practiceLocked = true -- 最初の practiceQ が届くまでは回答を受け付けない
 	renderPractice()
 end)
 cancelButton.MouseButton1Click:Connect(function()
