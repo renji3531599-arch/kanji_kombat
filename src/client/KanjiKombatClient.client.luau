@@ -979,5 +979,432 @@ S2C.OnClientEvent:Connect(function(data)
 	end
 end)
 
+-- ======================================================================
+-- 超拡張: 経済・バトルパス・派手バトル演出 (テスト互換を保ちつつ追加)
+-- ======================================================================
+
+-- Top bar: コイン / ジェム / レベル / ランク
+local topBar = UiKit.mk("Frame", {
+	Name = "TopBar",
+	Size = UDim2.new(1, 0, 0, 44),
+	Position = UDim2.fromOffset(0, 0),
+	BackgroundColor3 = Color3.fromRGB(18, 16, 24),
+	BackgroundTransparency = 0.12,
+	BorderSizePixel = 0,
+	ZIndex = 8,
+	Parent = screen,
+})
+UiKit.corner(topBar, 10)
+UiKit.stroke(topBar, Color3.fromRGB(80, 70, 90), 1, 0.3)
+
+local coinLbl = UiKit.label({
+	Size = UDim2.fromOffset(140, 28), Position = UDim2.fromOffset(12, 8),
+	Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 220, 90),
+	TextSize = 15, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 9,
+}, topBar)
+local gemLbl = UiKit.label({
+	Size = UDim2.fromOffset(120, 28), Position = UDim2.fromOffset(150, 8),
+	Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(90, 200, 255),
+	TextSize = 15, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 9,
+}, topBar)
+local levelLbl = UiKit.label({
+	Size = UDim2.fromOffset(200, 28), Position = UDim2.fromOffset(270, 8),
+	Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT,
+	TextSize = 14, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 9,
+}, topBar)
+local rankLbl = UiKit.label({
+	Size = UDim2.fromOffset(160, 28), Position = UDim2.new(1, -170, 0, 8),
+	Font = Enum.Font.GothamBold, TextColor3 = COL_GOLD,
+	TextSize = 14, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 9,
+}, topBar)
+
+local shopButton = UiKit.button({
+	Size = UDim2.fromOffset(92, 32), Position = UDim2.new(1, -260, 0, 6),
+	BackgroundColor3 = Color3.fromRGB(70, 60, 110), TextSize = 13, ZIndex = 9,
+}, topBar)
+local passButtonTop = UiKit.button({
+	Size = UDim2.fromOffset(92, 32), Position = UDim2.new(1, -360, 0, 6),
+	BackgroundColor3 = Color3.fromRGB(45, 85, 110), TextSize = 13, ZIndex = 9,
+}, topBar)
+local dailyButtonTop = UiKit.button({
+	Size = UDim2.fromOffset(92, 32), Position = UDim2.new(1, -460, 0, 6),
+	BackgroundColor3 = Color3.fromRGB(110, 70, 50), TextSize = 13, ZIndex = 9,
+}, topBar)
+
+-- ロビー内にあったTopBarと被らないようにロビーを少し下げる
+lobby.Position = UDim2.new(0.5, 0, 0.5, 22)
+
+-- ショップモーダル
+local shopModal = UiKit.mk("Frame", {
+	Name = "ShopModal", Visible = false,
+	Size = UDim2.fromOffset(760, 520), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5,0.5),
+	BackgroundColor3 = Color3.fromRGB(28, 26, 36), BorderSizePixel=0, ZIndex = 15,
+	Parent = screen,
+})
+UiKit.corner(shopModal, 16)
+UiKit.stroke(shopModal, COL_GOLD, 2, 0.15)
+local shopTitleLbl = UiKit.label({ Size=UDim2.new(1,-40,0,40), Position=UDim2.fromOffset(20,12), Font=Enum.Font.GothamBlack, TextColor3=COL_GOLD, TextSize=22, ZIndex=16 }, shopModal)
+local shopTabs = UiKit.mk("Frame", { Size=UDim2.new(1,-40,0,36), Position=UDim2.fromOffset(20,54), BackgroundTransparency=1, ZIndex=16 }, shopModal)
+local shopContent = UiKit.mk("ScrollingFrame", {
+	Size=UDim2.new(1,-40,1,-110), Position=UDim2.fromOffset(20,100),
+	BackgroundTransparency=1, CanvasSize=UDim2.fromOffset(0,800), ScrollBarThickness=6, ZIndex=16,
+}, shopModal)
+UiKit.mk("UIListLayout", { SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,8), Parent=shopContent })
+local shopClose = UiKit.button({ Size=UDim2.fromOffset(120,36), Position=UDim2.new(0.5,-60,1,-46), BackgroundColor3=Color3.fromRGB(70,70,90), ZIndex=16 }, shopModal)
+local shopTabButtons = {}
+local shopCurrentTab = "coins"
+local function buildShopTabs()
+	for i, key in ipairs(Config.SHOP_TABS) do
+		local btn = UiKit.button({
+			Size=UDim2.fromOffset(120,34), Position=UDim2.fromOffset((i-1)*130, 0),
+			BackgroundColor3 = (key==shopCurrentTab) and Color3.fromRGB(90,80,130) or Color3.fromRGB(45,43,60),
+			TextSize=13, ZIndex=17,
+		}, shopTabs)
+		if key == "coins" then btn.Text = I18n.t("shopCoinsTab")
+		elseif key == "gems" then btn.Text = I18n.t("shopGemsTab")
+		elseif key == "boost" then btn.Text = I18n.t("shopBoostTab")
+		elseif key == "cosmetic" then btn.Text = I18n.t("shopCosmeticTab")
+		elseif key == "pass" then btn.Text = I18n.t("shopPassTab")
+		else btn.Text = key:upper() end
+		shopTabButtons[key]=btn
+		btn.MouseButton1Click:Connect(function()
+			shopCurrentTab=key
+			for k,b in pairs(shopTabButtons) do b.BackgroundColor3 = (k==key) and Color3.fromRGB(90,80,130) or Color3.fromRGB(45,43,60) end
+			renderShop()
+		end)
+	end
+end
+buildShopTabs()
+
+local function shopItemRow(priceText, buttonText, desc, color, onClick)
+	local row = UiKit.mk("Frame", { Size=UDim2.new(1,-12,0,66), BackgroundColor3=COL_CARD, BorderSizePixel=0, LayoutOrder=1, ZIndex=17 }, shopContent)
+	UiKit.corner(row, 10)
+	UiKit.mk("Frame", { Size=UDim2.new(1,0,0,4), BackgroundColor3=color, BorderSizePixel=0, ZIndex=18 }, row)
+	local l1 = UiKit.label({ Size=UDim2.new(0.6,-20,0,26), Position=UDim2.fromOffset(12,12), Font=Enum.Font.GothamBold, TextColor3=COL_TEXT, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=18 }, row)
+	l1.Text = desc
+	local l2 = UiKit.label({ Size=UDim2.new(0.6,-20,0,20), Position=UDim2.fromOffset(12,36), Font=Enum.Font.Gotham, TextColor3=COL_DIM, TextSize=13, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=18 }, row)
+	l2.Text = priceText
+	local btn = UiKit.button({ Size=UDim2.fromOffset(120,36), Position=UDim2.new(1,-132,0,15), BackgroundColor3=Color3.fromRGB(170,45,60), TextSize=13, ZIndex=18 }, row)
+	btn.Text = buttonText
+	btn.MouseButton1Click:Connect(onClick)
+	return row
+end
+
+function renderShop()
+	for _,c in ipairs(shopContent:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+	shopContent.CanvasSize = UDim2.fromOffset(0, 600)
+	if shopCurrentTab=="coins" then
+		for _, prod in ipairs(Config.PRODUCTS.DEV) do
+			if prod.coins then
+				shopItemRow(prod.coins.." Coins", I18n.t("buyWithRobux",{price=prod.priceRobux}), prod.labelJa.." / "..prod.labelEn, COL_GOLD, function()
+					C2S:FireServer({action="buyDev", key=prod.key})
+					toast("Robux "..prod.priceRobux.." で購入をリクエスト…")
+				end)
+			end
+		end
+		shopItemRow("ヒント x1", I18n.t("buyWithCoins",{price=Config.ECONOMY.COST_HINT}), "対戦中に誤答を1つ消す", COL_GOOD, function()
+			C2S:FireServer({action="buyWithCoins", category="hint"})
+		end)
+		shopItemRow("シールド x1", I18n.t("buyWithCoins",{price=Config.ECONOMY.COST_SHIELD_REFILL}), "被ダメ半減シールドを再付与", Color3.fromRGB(90,160,255), function()
+			C2S:FireServer({action="buyWithCoins", category="shield"})
+		end)
+	elseif shopCurrentTab=="gems" then
+		for _, prod in ipairs(Config.PRODUCTS.DEV) do
+			if prod.gems then
+				shopItemRow(prod.gems.." Gems", I18n.t("buyWithRobux",{price=prod.priceRobux}), prod.labelJa, Color3.fromRGB(90,200,255), function()
+					C2S:FireServer({action="buyDev", key=prod.key})
+				end)
+			end
+		end
+	elseif shopCurrentTab=="boost" then
+		shopItemRow("2倍XP 1時間", I18n.t("buyWithRobux",{price=39}), "獲得XPが1時間2倍", Color3.fromRGB(180,120,255), function()
+			C2S:FireServer({action="buyDev", key="double_xp_1h"})
+		end)
+		shopItemRow("連勝キープ", I18n.t("buyWithRobux",{price=29}), "敗北時に連勝を守る", COL_GOLD, function()
+			C2S:FireServer({action="buyDev", key="streak_saver"})
+		end)
+	elseif shopCurrentTab=="cosmetic" then
+		for _, it in ipairs(Config.COSMETICS.TITLES) do
+			local price = it.priceCoins and (it.priceCoins.." Coins") or (it.priceGems and (it.priceGems.." Gems") or "Free")
+			shopItemRow(price, I18n.t("buyButton"), "称号: "..(it.labelJa or it.key), COL_GOLD, function()
+				C2S:FireServer({action="buyWithCoins", category="cosmetic", key="title:"..it.key})
+			end)
+		end
+		for _, it in ipairs(Config.COSMETICS.ARENAS) do
+			local price = it.priceCoins and (it.priceCoins.." Coins") or (it.priceGems and (it.priceGems.." Gems") or "Free")
+			shopItemRow(price, I18n.t("buyButton"), "アリーナ: "..(it.labelJa or it.key), Color3.fromRGB(160,90,255), function()
+				C2S:FireServer({action="buyWithCoins", category="cosmetic", key="arena:"..it.key})
+			end)
+		end
+	elseif shopCurrentTab=="pass" then
+		shopItemRow("400 Robux", I18n.t("passBuyPremium"), "全ティアのプレミアム報酬を解放！", COL_GOLD, function()
+			C2S:FireServer({action="buyDev", key="battle_pass_premium"})
+		end)
+		for tier=1, Config.PROGRESSION.PASS_TIERS do
+			local free = nil
+			for _, r in ipairs(Config.PASS_REWARDS) do if r.tier==tier then free=r break end end
+			if free then
+				local desc = "Tier "..tier.." 無料: "..(free.free.coins and (free.free.coins.." Coins") or "報酬")
+				if free.premium then desc = desc .. " / プレミアム: Gems+"..(free.premium.gems or 0) end
+				shopItemRow("Tier "..tier, (profile and profile.passTier or 0) >= tier and "獲得済み" or "未達成", desc, (profile and profile.passTier or 0)>=tier and COL_GOOD or COL_DIM, function() end)
+			end
+		end
+	end
+end
+
+shopClose.MouseButton1Click:Connect(function() shopModal.Visible=false end)
+shopButton.MouseButton1Click:Connect(function() shopModal.Visible = not shopModal.Visible; if shopModal.Visible then renderShop() end end)
+passButtonTop.MouseButton1Click:Connect(function() shopCurrentTab="pass"; for k,b in pairs(shopTabButtons) do b.BackgroundColor3=(k=="pass") and Color3.fromRGB(90,80,130) or Color3.fromRGB(45,43,60) end; shopModal.Visible=true; renderShop() end)
+dailyButtonTop.MouseButton1Click:Connect(function() C2S:FireServer({action="claimDaily"}) end)
+
+-- Battle HUD 超拡張: コンボ・必殺ゲージ・ボタン
+local comboLbl = UiKit.label({
+	Size=UDim2.fromOffset(300, 44), Position=UDim2.new(0.5,-150,0,92),
+	Font=Enum.Font.GothamBlack, TextColor3=Color3.fromRGB(255, 220, 90), TextSize=28, TextScaled=false,
+	Visible=false, ZIndex=4,
+}, battle)
+local ultBarHolder = UiKit.mk("Frame", {
+	Size=UDim2.fromOffset(560, 14), Position=UDim2.new(0.5,-280,1,-52),
+	BackgroundColor3=Color3.fromRGB(25,25,32), BorderSizePixel=0, ZIndex=4,
+}, battle)
+UiKit.corner(ultBarHolder, 7)
+local ultBarFill = UiKit.mk("Frame", { Size=UDim2.fromScale(0,1), BackgroundColor3=Color3.fromRGB(140,90,255), BorderSizePixel=0, ZIndex=4 }, ultBarHolder)
+UiKit.corner(ultBarFill, 7)
+local ultBarLbl = UiKit.label({
+	Size=UDim2.new(1,0,1,0), Font=Enum.Font.GothamBold, TextColor3=Color3.fromRGB(245,245,250), TextSize=11, ZIndex=5,
+}, ultBarHolder)
+
+local hintBtn = UiKit.button({
+	Size=UDim2.fromOffset(110, 38), Position=UDim2.new(0.5, -280, 0, 518),
+	BackgroundColor3=Color3.fromRGB(60,110,90), TextSize=13, ZIndex=4,
+}, battle)
+local ultBtn = UiKit.button({
+	Size=UDim2.fromOffset(110, 38), Position=UDim2.new(0.5, -55, 0, 518),
+	BackgroundColor3=Color3.fromRGB(140, 50, 90), TextSize=13, ZIndex=4,
+}, battle)
+local shieldBtn = UiKit.button({
+	Size=UDim2.fromOffset(110, 38), Position=UDim2.new(0.5, 170, 0, 518),
+	BackgroundColor3=Color3.fromRGB(70,80,130), TextSize=13, ZIndex=4,
+}, battle)
+local ultReadyFx = UiKit.label({
+	Size=UDim2.fromOffset(300, 28), Position=UDim2.new(0.5,-150,0, 360),
+	Font=Enum.Font.GothamBlack, TextColor3=Color3.fromRGB(140,90,255), Visible=false, ZIndex=6,
+}, battle)
+
+-- 練習リロールボタン
+local pracRerollBtn = UiKit.button({
+	Size=UDim2.fromOffset(140, 36), Position=UDim2.new(0.5, 120, 1, -70),
+	BackgroundColor3=Color3.fromRGB(90, 70, 130), TextSize=13, ZIndex=4,
+}, prac)
+pracRerollBtn.Text = I18n.t("practiceReroll")
+pracRerollBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="practiceReroll"}) end)
+
+hintBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="useHint"}) end)
+ultBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="activateUltimate"}) end)
+shieldBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="useShield"}) end)
+
+-- ダメージ数字ポップ
+local dmgPop = UiKit.label({
+	Size=UDim2.fromOffset(200, 40), Position=UDim2.new(0.5,-100,0.5,-80),
+	Font=Enum.Font.GothamBlack, TextColor3=COL_GOLD, TextSize=32, Visible=false, ZIndex=7,
+}, battle)
+
+local function popDamage(txt, color)
+	dmgPop.Text = txt
+	dmgPop.TextColor3 = color or COL_GOLD
+	dmgPop.Visible = true
+	dmgPop.TextTransparency = 0
+	TweenService:Create(dmgPop, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0.5,-100,0.5,-140), TextTransparency=1 }):Play()
+	task.delay(0.65, function() dmgPop.Visible=false; dmgPop.Position=UDim2.new(0.5,-100,0.5,-80) end)
+end
+
+local function updateTopBar()
+	if not profile then
+		coinLbl.Text = I18n.t("coins")..": --"
+		gemLbl.Text = I18n.t("gems")..": --"
+		levelLbl.Text = I18n.t("profileLoading")
+		rankLbl.Text = ""
+		return
+	end
+	coinLbl.Text = "🪙 "..(profile.coins or 0)
+	gemLbl.Text = "💎 "..(profile.gems or 0)
+	levelLbl.Text = I18n.t("profileLevel", { level=profile.level or 1, xp=profile.xp or 0, next= (Config.PROGRESSION.XP_TABLE and Config.PROGRESSION.XP_TABLE[profile.level or 1]) or 100 })
+	-- ランクは選択中レベルのレートで表示 (なければ総合)
+	local rkKey = selectedKey and profile.ratings[selectedKey] or 1000
+	local r = Config.rankOf(rkKey)
+	rankLbl.Text = r.icon.." "..(I18n.getLocale()=="ja" and r.labelJa or r.labelEn).." "..rkKey
+end
+
+local function updateBattleHud(data)
+	-- data: combo, ult, shield, opUlt etc.
+	if data.combo and data.combo >=2 then
+		comboLbl.Visible = true
+		comboLbl.Text = I18n.t("comboLabel", { n=data.combo })
+		comboLbl.TextColor3 = (data.combo>=5) and Color3.fromRGB(255,80,90) or COL_GOLD
+	else
+		comboLbl.Visible = false
+	end
+	local pct = math.clamp((data.ult or 0)/Config.BATTLE.ULT_MAX, 0, 1)
+	ultBarFill.Size = UDim2.fromScale(pct,1)
+	if pct >=1 then
+		ultBarFill.BackgroundColor3 = Color3.fromRGB(255,210,90)
+		ultBarLbl.Text = I18n.t("ultReady")
+		ultReadyFx.Visible = true
+		ultReadyFx.Text = I18n.t("ultReady")
+		ultBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 50)
+	else
+		ultBarFill.BackgroundColor3 = Color3.fromRGB(140,90,255)
+		ultBarLbl.Text = I18n.t("ultButton", { pct=math.floor(pct*100) })
+		ultReadyFx.Visible = false
+		ultBtn.BackgroundColor3 = Color3.fromRGB(140,50,90)
+	end
+	hintBtn.Text = I18n.t("hintButton", { cost=Config.ECONOMY.COST_HINT })
+	shieldBtn.Text = data.shield and I18n.t("shieldActive") or I18n.t("shieldButton")
+	shieldBtn.BackgroundColor3 = data.shield and Color3.fromRGB(90,160,255) or Color3.fromRGB(70,80,130)
+end
+
+-- 既存 retranslate をラップして新UIも翻訳
+local _oldRetranslate = retranslate
+retranslate = function()
+	_oldRetranslate()
+	-- 新UI
+	shopTitleLbl.Text = I18n.t("shopTitle")
+	shopClose.Text = I18n.t("backToLobby")
+	shopButton.Text = I18n.t("shopButton")
+	passButtonTop.Text = I18n.t("passButton")
+	dailyButtonTop.Text = I18n.t("dailyButton")
+	hintBtn.Text = I18n.t("hintButton", { cost=Config.ECONOMY.COST_HINT })
+	ultBtn.Text = I18n.t("ultButton", { pct=0 })
+	shieldBtn.Text = I18n.t("shieldButton")
+	pracRerollBtn.Text = I18n.t("practiceReroll")
+	updateTopBar()
+	if curQ then updateBattleHud(curQ) end
+end
+
+-- 既存 renderProfile をラップ
+local _oldRenderProfile = renderProfile
+renderProfile = function()
+	_oldRenderProfile()
+	updateTopBar()
+	if profile and profile.passTier then
+		-- バトルパスティアも topBar にチラ見せ? ここではログ
+	end
+end
+
+-- 追加 S2C ハンドラー (新メッセージ)
+S2C.OnClientEvent:Connect(function(data)
+	if type(data)~="table" or type(data.action)~="string" then return end
+	local a=data.action
+	if a=="currencyUpdate" then
+		if profile then
+			profile.coins=data.coins
+			profile.gems=data.gems
+			profile.inventory=data.inventory
+			profile.passXp=data.passXp
+			profile.passTier=data.passTier
+			profile.premiumPass=data.premium
+		end
+		updateTopBar()
+	elseif a=="progressionUpdate" then
+		if profile then
+			profile.level=data.level
+			profile.xp=data.xp
+			profile.passXp=data.passXp
+			profile.passTier=data.passTier
+		end
+		updateTopBar()
+	elseif a=="levelUp" then
+		toast(I18n.t("levelUp", { level=data.level }))
+		UiKit.playSound("rbxasset://sounds/bass.mp3",1.5,0.7)
+		popDamage("LEVEL UP!", COL_GOLD)
+	elseif a=="passReward" then
+		toast("Pass Tier "..data.tier.." 獲得！")
+		UiKit.playSound("rbxasset://sounds/electronicpingshort.wav",1.3,0.6)
+	elseif a=="missionProgress" then
+		-- ミッション進捗はサイレント
+	elseif a=="missionComplete" then
+		toast(I18n.t("missionComplete", { coins=data.rewardCoins, xp=data.rewardXp }))
+		popDamage("MISSION CLEAR!", COL_GOOD)
+	elseif a=="dailyResult" then
+		local r=data.result
+		if r.ok then
+			toast("Daily "..r.streak.."日目: +"..r.coins.." Coins"..(r.gems>0 and (" +"..r.gems.." Gems") or ""))
+			popDamage("DAILY +"..r.coins, COL_GOLD)
+		else
+			toast(I18n.t("toastNotEnoughCoins"))
+		end
+	elseif a=="hintResult" then
+		local idx=data.eliminate
+		if idx and choiceButtons[idx] then
+			choiceButtons[idx].button.BackgroundColor3 = Color3.fromRGB(40,40,50)
+			choiceButtons[idx].button.AutoButtonColor=false
+			choiceButtons[idx].main.TextTransparency=0.6
+			choiceButtons[idx].sub.TextTransparency=0.6
+			UiKit.playSound("rbxasset://sounds/snap.mp3",1.2,0.4)
+		end
+	elseif a=="ultimateReady" then
+		ultReadyFx.Visible=true
+		ultReadyFx.Text=I18n.t("ultReady")
+		UiKit.playSound("rbxasset://sounds/bass.mp3",1.2,0.8)
+	elseif a=="shieldActivated" then
+		toast(I18n.t("shieldActive"))
+		popDamage("SHIELD!", Color3.fromRGB(90,160,255))
+	elseif a=="secondChanceActivated" then
+		toast("SECOND CHANCE! HP30で復活！")
+		popDamage("REVIVE!", COL_GOOD)
+	elseif a=="opponentSecondChance" then
+		toast("相手が復活した！")
+	elseif a=="shopResult" then
+		toast(data.ok and "購入成功！" or "購入失敗")
+		if data.ok then UiKit.playSound("rbxasset://sounds/electronicpingshort.wav",1.2,0.6) end
+		updateTopBar()
+	elseif a=="gamePassGranted" then
+		toast("GamePass 獲得: "..tostring(data.key))
+	elseif a=="currencyUpdate" then -- duplicate guard
+	end
+end)
+
+-- question / answerResult をフックしてコンボ演出を追加
+local _oldS2C = S2C
+-- 既存の question/answerResult にコンボ等を追加で扱うため、もう一つリスナーを追加
+S2C.OnClientEvent:Connect(function(data)
+	if data.action=="question" then
+		curQ = curQ or {}
+		curQ.combo = data.combo
+		curQ.ult = data.ult
+		curQ.shield = data.shield
+		updateBattleHud({ combo=data.combo, ult=data.ult, shield=data.shield })
+		comboLbl.Visible=false
+		ultReadyFx.Visible=false
+	elseif data.action=="answerResult" then
+		-- コンボ・クリティカル・パーフェクト演出
+		local wasCombo = data.combo or 0
+		if data.isPerfect then
+			promptHint.Text = I18n.t("perfect").." "..promptHint.Text
+			popDamage("PERFECT!", Color3.fromRGB(255,220,90))
+			UiKit.playSound("rbxasset://sounds/electronicpingshort.wav",2.0,0.7)
+		elseif data.isCrit then
+			popDamage("CRITICAL "..(data.dealt or 0).."!", COL_BAD)
+		elseif data.dealt and data.dealt>0 then
+			if wasCombo>=3 then popDamage(wasCombo.." COMBO +"..data.dealt, COL_GOLD) end
+		end
+		if data.isGuarded then
+			toast(I18n.t("guarded"))
+		end
+		if data.wasShielded then
+			toast(I18n.t("shieldBroken"))
+		end
+		if data.ultDamage and data.ultDamage>0 then
+			popDamage("ULTIMATE "..data.ultDamage.."!", Color3.fromRGB(140,90,255))
+		end
+		updateBattleHud({ combo=data.combo, ult=data.ult, shield=nil })
+		-- HPバー演出は既存が行う
+	end
+end)
+
+-- 初回shop構築
+renderShop()
+
 retranslate()
 showLobby()
+
