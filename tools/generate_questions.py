@@ -53,6 +53,9 @@ PINNED_QUESTIONS = {
         {'p': '一日', 'a': 'いちにち', 'd': ['ひとにち', 'いつにち', 'いちじつ'], 't': 'w'},
         {'p': '青年', 'a': 'せいねん', 'd': ['あおとし', 'あおねん', 'せいとし'], 't': 'w'},
     ],
+    'K03': [
+        {'p': '実施', 'a': 'じっし', 'd': ['じし', 'じつし', 'ぢっし'], 't': 'w'},
+    ],
     'KP2': [
         {'p': '定款', 'a': 'ていかん', 'd': ['ていせん', 'じょうかん', 'さだかん'], 't': 'w'},
     ],
@@ -324,14 +327,7 @@ def confusing_variants(reading):
             if candidate not in out:
                 out.append(candidate)
 
-    # それでも足りない場合だけ、促音の位置を間違える候補を追加する。
-    for i, ch in enumerate(chars):
-        if ch == 'っ' or i > 0 and chars[i - 1] == 'っ':
-            continue
-        if i + 1 < len(chars) and ch not in 'ゃゅょぁぃぅぇぉっ':
-            candidate = reading[:i + 1] + 'っ' + reading[i + 1:]
-            if candidate not in out:
-                out.append(candidate)
+    # 促音の新規挿入は日本語話者がしない人工的な誤答になるため生成しない。
     return out
 
 
@@ -444,13 +440,25 @@ def semantic_distractors(word, reading, kj, forbid, rng, limit=6):
     return out
 
 
+def sokuon_shape_ok(answer, candidate):
+    """促音は脱落/「つ」読みだけを許可し、挿入・二重化を捨てる。"""
+    if 'っっ' in candidate:
+        return False
+    if candidate.count('っ') > answer.count('っ'):
+        return False
+    if 'っ' not in answer and (candidate.startswith('っ') or candidate.endswith('っ')):
+        return False
+    return True
+
+
 def near_miss_distractors(reading, pool_readings, forbid, rng, limit=3):
     direct = [x for x in confusing_variants(reading)
-              if x != reading and x not in forbid and small_shape_ok(x, reading) and KANA_RE.match(x)]
+              if sokuon_shape_ok(reading, x) and x != reading and x not in forbid and small_shape_ok(x, reading) and KANA_RE.match(x)]
     rng.shuffle(direct)
     scored = []
     for candidate in pool_readings:
-        if candidate in forbid or candidate == reading or candidate in direct or not small_shape_ok(candidate, reading):
+        if (not sokuon_shape_ok(reading, candidate) or candidate in forbid or
+                candidate == reading or candidate in direct or not small_shape_ok(candidate, reading)):
             continue
         if abs(len(candidate) - len(reading)) > 2:
             continue
@@ -491,7 +499,8 @@ def swap_distractors(word, reading, kj, level_pool_answers, forbid, rng, limit=3
                 break
     out = []
     for c in cands:
-        if c != reading and c not in forbid and c not in out and 1 <= len(c) <= 8:
+        if (sokuon_shape_ok(reading, c) and c != reading and c not in forbid
+                and c not in out and 1 <= len(c) <= 8):
             out.append(c)
     return out
 
@@ -499,7 +508,8 @@ def swap_distractors(word, reading, kj, level_pool_answers, forbid, rng, limit=3
 def pick_random_readings(reading, pool_readings, forbid, rng, n, length_delta=1):
     L = len(reading)
     cands = [r for r in pool_readings
-             if abs(len(r) - L) <= length_delta and r != reading and r not in forbid]
+             if (sokuon_shape_ok(reading, r) and abs(len(r) - L) <= length_delta
+                 and r != reading and r not in forbid)]
     rng.shuffle(cands)
     return cands[:n]
 
@@ -576,7 +586,8 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
         used_romaji = {romaji_key(answer)}
         for d in distractors:
             d_key = romaji_key(d)
-            if d == answer or d in forbidden or d in ds or d_key in used_romaji:
+            if (not sokuon_shape_ok(answer, d) or d == answer or d in forbidden
+                    or d in ds or d_key in used_romaji):
                 continue
             ds.append(d)
             used_romaji.add(d_key)
