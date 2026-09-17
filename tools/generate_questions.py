@@ -254,40 +254,434 @@ def assign_words(words, pools):
     return per_level
 
 
-# ---------------------------------------------------------------- distractors
-def swap_distractors(word, reading, kj, level_pool_answers, forbid, rng, limit=3):
-    """reading-swap: replace prefix/suffix on-yomi of a kanji with its alternate on-yomi."""
-    cands = []
-    kanji_chars = HAN_RE.findall(word)
-    if kanji_chars and kanji_chars[0] in kj:
-        first = kj[kanji_chars[0]]
-        for o in first['on']:
-            if reading.startswith(o) and len(o) < len(reading):
-                for o2 in first['on']:
-                    if o2 != o and len(o2) == len(o):
-                        cands.append(o2 + reading[len(o):])
-                break
-    if kanji_chars and kanji_chars[-1] in kj:
-        last = kj[kanji_chars[-1]]
-        for o in last['on']:
-            if reading.endswith(o) and len(o) < len(reading):
-                for o2 in last['on']:
-                    if o2 != o and len(o2) == len(o):
-                        cands.append(reading[:-len(o)] + o2)
-                break
+# ---------------------------------------------------------------- romaji helper (Python版 Romaji.luau) — 重複排除用
+_BASE_ROMAJI = {
+    "あ":"a","い":"i","う":"u","え":"e","お":"o",
+    "か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko",
+    "が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go",
+    "さ":"sa","し":"shi","す":"su","せ":"se","そ":"so",
+    "ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo",
+    "た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to",
+    "だ":"da","ぢ":"ji","づ":"zu","で":"de","ど":"do",
+    "な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no",
+    "は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho",
+    "ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo",
+    "ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po",
+    "ま":"ma","み":"mi","む":"mu","め":"me","も":"mo",
+    "や":"ya","ゆ":"yu","よ":"yo",
+    "ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro",
+    "わ":"wa","ゐ":"i","ゑ":"e","を":"o","ん":"n","ゔ":"vu",
+    "ぁ":"a","ぃ":"i","ぅ":"u","ぇ":"e","ぉ":"o","ゃ":"ya","ゅ":"yu","ょ":"yo","ゎ":"wa",
+}
+_COMBO_ROMAJI = {
+    "きゃ":"kya","きゅ":"kyu","きょ":"kyo",
+    "ぎゃ":"gya","ぎゅ":"gyu","ぎょ":"gyo",
+    "しゃ":"sha","しゅ":"shu","しょ":"sho",
+    "じゃ":"ja","じゅ":"ju","じょ":"jo",
+    "ちゃ":"cha","ちゅ":"chu","ちょ":"cho",
+    "ぢゃ":"ja","ぢゅ":"ju","ぢょ":"jo",
+    "にゃ":"nya","にゅ":"nyu","にょ":"nyo",
+    "ひゃ":"hya","ひゅ":"hyu","ひょ":"hyo",
+    "びゃ":"bya","びゅ":"byu","びょ":"byo",
+    "ぴゃ":"pya","ぴゅ":"pyu","ぴょ":"pyo",
+    "みゃ":"mya","みゅ":"myu","みょ":"myo",
+    "りゃ":"rya","りゅ":"ryu","りょ":"ryo",
+    "ふぁ":"fa","ふぃ":"fi","ふぇ":"fe","ふぉ":"fo",
+    "うぃ":"wi","うぇ":"we","うぉ":"wo",
+    "しぇ":"she","じぇ":"je","ちぇ":"che",
+    "てぃ":"ti","でぃ":"di","とぅ":"tu","どぅ":"du",
+    "つぁ":"tsa","つぃ":"tsi","つぇ":"tse","つぉ":"tso",
+    "ゔぁ":"va","ゔぃ":"vi","ゔぇ":"ve","ゔぉ":"vo",
+}
+_ALT_ROMAJI = {"ぢ":"di","づ":"du"}
+_ALT_COMBO_ROMAJI = {"ぢゃ":"dya","ぢゅ":"dyu","ぢょ":"dyo"}
+_SMALL = set(["ぁ","ぃ","ぅ","ぇ","ぉ","ゃ","ゅ","ょ","ゎ"])
+_VOWELS = set(["a","i","u","e","o"])
+_N_APO = set(["あ","い","う","え","お","や","ゆ","よ","ぁ","ぃ","ぅ","ぇ","ぉ","ゃ","ゅ","ょ","ゎ"])
+
+def _kana_to_romaji(kana, alt=False):
+    cs = list(kana)  # each char is 1 kana (all 3-byte but Python handles)
+    # Actually need to split correctly but kana are single codepoints so list works
     out = []
-    for c in cands:
-        if c != reading and c not in forbid and c not in out and 1 <= len(c) <= 8:
-            out.append(c)
+    i = 0
+    n = len(cs)
+    def syllable_at(idx):
+        if idx+1 < n:
+            two = cs[idx] + cs[idx+1]
+            if alt and two in _ALT_COMBO_ROMAJI:
+                return _ALT_COMBO_ROMAJI[two], 2
+            if two in _COMBO_ROMAJI:
+                return _COMBO_ROMAJI[two], 2
+        ch = cs[idx]
+        if ch == "ん":
+            nxt = cs[idx+1] if idx+1 < n else None
+            if nxt and nxt in _N_APO:
+                return "n'",1
+            return "n",1
+        if alt and ch in _ALT_ROMAJI:
+            return _ALT_ROMAJI[ch],1
+        return _BASE_ROMAJI.get(ch, ch),1
+    while i < n:
+        c = cs[i]
+        if c == "っ" or c == "ッ":
+            nxt = cs[i+1] if i+1<n else None
+            if nxt and nxt not in _SMALL and nxt not in ("ー","っ","ッ"):
+                r,_ = syllable_at(i+1)
+                if r:
+                    if r.startswith("ch"):
+                        out.append("t")
+                    else:
+                        k = r[0]
+                        if k not in _VOWELS:
+                            if k == "n" and alt:
+                                out.append("n'")
+                            else:
+                                out.append(k)
+            i+=1
+        elif c == "ー":
+            prev = "".join(out)
+            v=""
+            for ch in reversed(prev):
+                if ch in _VOWELS:
+                    v=ch
+                    break
+            out.append(v)
+            i+=1
+        else:
+            r, used = syllable_at(i)
+            out.append(r)
+            i+=used
+    return "".join(out)
+
+def _romaji_many(kana_list):
+    out=[]
+    used={}
+    for idx, kana in enumerate(kana_list):
+        r=_kana_to_romaji(kana)
+        if r in used:
+            # try to move previous to alt
+            for j in range(idx):
+                if out[j]==r:
+                    alt=_kana_to_romaji(kana_list[j], True)
+                    if alt!=r and alt not in used:
+                        used.pop(out[j],None)
+                        out[j]=alt
+                        used[alt]=True
+                        break
+        if r in used:
+            alt=_kana_to_romaji(kana, True)
+            if alt!=r and alt not in used:
+                r=alt
+        out.append(r)
+        used[r]=True
     return out
 
+# ---------------------------------------------------------------- distractors — 常識的で本当に間違えやすい生成
+# 漢検で実際に起こる「あり得る誤読」だけを採用: 音訓入れ替え、別音読み、連濁ミス、熟語の読み替え
+# 不自然な「いっちにち」系の機械的促音挿入は排除し、常識的な誤読だけを厳選
+
+_DAKUTEN_MAP = {
+    'か': ['が'], 'き': ['ぎ'], 'く': ['ぐ'], 'け': ['げ'], 'こ': ['ご'],
+    'さ': ['ざ'], 'し': ['じ'], 'す': ['ず'], 'せ': ['ぜ'], 'そ': ['ぞ'],
+    'た': ['だ'], 'ち': ['ぢ'], 'つ': ['づ'], 'て': ['で'], 'と': ['ど'],
+    'は': ['ば', 'ぱ'], 'ひ': ['び', 'ぴ'], 'ふ': ['ぶ', 'ぷ'], 'へ': ['べ', 'ぺ'], 'ほ': ['ぼ', 'ぽ'],
+    'が': ['か'], 'ぎ': ['き'], 'ぐ': ['く'], 'げ': ['け'], 'ご': ['こ'],
+    'ざ': ['さ'], 'じ': ['し', 'ぢ'], 'ず': ['す', 'づ'], 'ぜ': ['せ'], 'ぞ': ['そ'],
+    'だ': ['た'], 'ぢ': ['ち', 'じ'], 'づ': ['つ', 'ず'], 'で': ['て'], 'ど': ['と'],
+    'ば': ['は', 'ぱ'], 'び': ['ひ', 'ぴ'], 'ぶ': ['ふ', 'ぷ'], 'べ': ['へ', 'ぺ'], 'ぼ': ['ほ', 'ぽ'],
+    'ぱ': ['は', 'ば'], 'ぴ': ['ひ', 'び'], 'ぷ': ['ふ', 'ぶ'], 'ぺ': ['へ', 'べ'], 'ぽ': ['ほ', 'ぼ'],
+}
+
+def _lev(a, b):
+    n, m = len(a), len(b)
+    dp = list(range(m+1))
+    for i in range(1, n+1):
+        ndp = [i] + [0]*m
+        for j in range(1, m+1):
+            cost = 0 if a[i-1] == b[j-1] else 1
+            ndp[j] = min(dp[j]+1, ndp[j-1]+1, dp[j-1]+cost)
+        dp = ndp
+    return dp[m]
+
+def _confusion_score(ans, cand):
+    if cand == ans:
+        return -999
+    ld = abs(len(ans)-len(cand))
+    score = 50
+    if ld == 0:
+        score += 14
+    elif ld == 1:
+        score += 10
+    else:
+        score -= ld * 12
+    d = _lev(ans, cand)
+    if d == 1:
+        score += 24
+    elif d == 2:
+        score += 16
+    elif d == 3:
+        score += 6
+    else:
+        score -= d * 5
+    pref = 0
+    for i in range(min(len(ans), len(cand))):
+        if ans[i]==cand[i]:
+            pref+=1
+        else:
+            break
+    suff = 0
+    for i in range(1, min(len(ans), len(cand))+1):
+        if ans[-i]==cand[-i]:
+            suff+=1
+        else:
+            break
+    score += pref*4 + suff*4
+    # 同じ語尾は超紛らわしい (〜かん/せん, 〜しょう/せい など)
+    if len(ans)>=2 and len(cand)>=2 and ans[-2:]==cand[-2:]:
+        score += 8
+    if len(ans)>=1 and len(cand)>=1 and ans[-1]==cand[-1]:
+        score += 5
+    # 濁点1文字違いは常識的な連濁ミスとして加点
+    if len(ans)==len(cand):
+        diff = [(a,c) for a,c in zip(ans,cand) if a!=c]
+        if len(diff)==1:
+            a,c = diff[0]
+            if c in _DAKUTEN_MAP.get(a, []):
+                score += 18
+    # 現実的な誤読は「同じ漢字の別読み」に起因するので、共通部分が長いほど高得点は維持
+    return score
+
+def _find_segmentation(kanjis, answer_core, kj):
+    # kanjis: list of kanji characters (with 々 resolved)
+    # answer_core: kana string for kanji part only
+    # returns list of segments or None
+    n = len(kanjis)
+    # memoization
+    memo = {}
+    def dfs(idx, pos):
+        key = (idx,pos)
+        if key in memo:
+            return memo[key]
+        if idx==n:
+            if pos==len(answer_core):
+                return []
+            else:
+                memo[key]=None
+                return None
+        kan = kanjis[idx]
+        readings = kj.get(kan, {}).get('on', []) + kj.get(kan, {}).get('kun', [])
+        # 並びは長い順→一致しやすい
+        readings = sorted(set(readings), key=lambda x: (-len(x), x))
+        # 試す: answer_core[pos:] が reading で始まるもの
+        for r in readings:
+            if answer_core.startswith(r, pos):
+                rest = dfs(idx+1, pos+len(r))
+                if rest is not None:
+                    memo[key]=[r]+rest
+                    return memo[key]
+        memo[key]=None
+        return None
+    return dfs(0,0)
+
+def _realistic_variants(word, answer, kj, rng):
+    out=set()
+    # word を漢字部と送り仮名に分離
+    m = re.match(r'^([\u4E00-\u9FFF々]+)([\u3041-\u309F]*)$', word)
+    if not m:
+        return []
+    kanji_str, tail = m.groups()
+    kanjis = list(kanji_str)
+    for i,ch in enumerate(kanjis):
+        if ch=='々' and i>0:
+            kanjis[i]=kanjis[i-1]
+    answer_core = answer
+    if tail and answer.endswith(tail):
+        answer_core = answer[:-len(tail)] if tail else answer
+    elif tail:
+        # 送りがあるのに答えが tail で終わらない場合 (例: 行く いく vs おこなう) は segmentation を諦めて fallback
+        answer_core = answer  # fallback: 全体で探す
+        tail = ""  # 送りを無視
+    # 2文字以上の純漢字語は segmentation を試す
+    segs = None
+    if kanjis:
+        segs = _find_segmentation(kanjis, answer_core, kj)
+    if segs and len(segs)==len(kanjis):
+        # 各漢字の別読みで入れ替え
+        for idx, kan in enumerate(kanjis):
+            orig = segs[idx]
+            alts = list(dict.fromkeys(kj.get(kan, {}).get('on', []) + kj.get(kan, {}).get('kun', [])))
+            for alt in alts:
+                if alt==orig: continue
+                # 熟語(送りなし)では動詞/形容詞の送りを含む訓は不自然なので除外(音読みは除外しない)
+                is_kun_alt = alt in kj.get(kan, {}).get('kun', [])
+                if is_kun_alt and len(kanjis)>=2 and not tail and len(alt)>2 and alt[-1] in ('い','る','す','く','む','ぶ','ぬ','う','つ','し'):
+                    # 例: 青 あおい, 定 さだめる は熟語では不自然
+                    continue
+                # 長さが大きく違いすぎる(±2以上)のは除外して自然さを保つ
+                if abs(len(alt)-len(orig))>1 and abs(len(alt+tail)-len(answer))>1:
+                    # ただし on↔kun で長さが変わるのは許容するが、あまりに長いのは除外
+                    if len(alt)>4 or len(orig)>4:
+                        continue
+                new_core = "".join(segs[:idx] + [alt] + segs[idx+1:])
+                new_reading = new_core + tail
+                if new_reading != answer and 1 <= len(new_reading) <= 8 and KANA_RE.match(new_reading):
+                    out.add(new_reading)
+            # 連濁ミス: orig の先頭を濁点化/清音化 (実際の別読みになくても学習者がやるミス)
+            if orig:
+                first = orig[0]
+                # 濁点化
+                for voiced in _DAKUTEN_MAP.get(first, []):
+                    rend = voiced + orig[1:]
+                    new_core = "".join(segs[:idx] + [rend] + segs[idx+1:])
+                    new_reading = new_core + tail
+                    if new_reading != answer and KANA_RE.match(new_reading) and new_reading not in alts:
+                        # 連濁は2文字目以降の漢字で起こりやすいが、1文字目でも誤読としてあり得るので許容
+                        # ただし自然な範囲で: 2文字目以降は特に常識的
+                        out.add(new_reading)
+                # 清音化 (濁っているものを清音に)
+                for base, voiced_list in _DAKUTEN_MAP.items():
+                    if first in voiced_list:
+                        rend = base + orig[1:]
+                        new_core = "".join(segs[:idx] + [rend] + segs[idx+1:])
+                        new_reading = new_core + tail
+                        if new_reading != answer and KANA_RE.match(new_reading):
+                            out.add(new_reading)
+        # 熟語全体で on↔kun の混同として、全体を訓読みに置き換えるパターンも一部生成 (例: 青年 せいねん → あおとし)
+        # 全ての漢字を訓読みにした場合
+        # 収集: 各漢字の訓読みの代表1つで再構成
+        kun_segs=[]
+        has_kun=True
+        for kan in kanjis:
+            kuns = kj.get(kan, {}).get('kun', [])
+            if not kuns:
+                has_kun=False
+                break
+            kun_segs.append(kuns[0])
+        if has_kun:
+            # 純訓読みが動詞語尾を含む場合は熟語として不自然なので除外
+            bad_kun=False
+            if len(kanjis)>=2 and not tail:
+                for ks in kun_segs:
+                    if len(ks)>2 and ks[-1] in ('い','る','す','く','む','ぶ','ぬ','う','つ','し'):
+                        bad_kun=True
+                        break
+            if not bad_kun:
+                kun_reading = "".join(kun_segs) + tail
+                if kun_reading != answer and KANA_RE.match(kun_reading) and 2 <= len(kun_reading) <= 8:
+                    out.add(kun_reading)
+    else:
+        # segmentation 失敗時のフォールバック: 前方/後方一致で置換 (旧 swap だが長さ差許容)
+        kanji_chars = HAN_RE.findall(word)
+        if kanji_chars:
+            # 前方の漢字
+            first = kanji_chars[0]
+            for orig in kj.get(first, {}).get('on', []) + kj.get(first, {}).get('kun', []):
+                if answer.startswith(orig) and len(orig) < len(answer):
+                    for alt in kj.get(first, {}).get('on', []) + kj.get(first, {}).get('kun', []):
+                        if alt != orig and abs(len(alt)-len(orig))<=1:
+                            cand = alt + answer[len(orig):]
+                            if cand != answer and KANA_RE.match(cand):
+                                out.add(cand)
+            # 後方の漢字
+            last = kanji_chars[-1]
+            for orig in kj.get(last, {}).get('on', []) + kj.get(last, {}).get('kun', []):
+                if answer.endswith(orig) and len(orig) < len(answer):
+                    for alt in kj.get(last, {}).get('on', []) + kj.get(last, {}).get('kun', []):
+                        if alt != orig and abs(len(alt)-len(orig))<=1:
+                            cand = answer[:-len(orig)] + alt
+                            if cand != answer and KANA_RE.match(cand):
+                                out.add(cand)
+    # 単漢字の場合は全別読みを強く推す (最も常識的な間違い)
+    if len(kanjis)==1:
+        kan = kanjis[0]
+        for alt in kj.get(kan, {}).get('on', []) + kj.get(kan, {}).get('kun', []):
+            if alt != answer and KANA_RE.match(alt):
+                out.add(alt)
+    # 長さフィルタと answer 除外
+    out = {c for c in out if c != answer and 1 <= len(c) <= 8 and KANA_RE.match(c)}
+    return list(out)
+
+def swap_distractors(word, reading, kj, level_pool_answers, forbid, rng, limit=3):
+    # 後方互換: realistic_variants に委譲 (旧呼び出しも自然な誤読を返す)
+    cands = _realistic_variants(word, reading, kj, rng)
+    out=[]
+    for c in cands:
+        if c != reading and c not in forbid and c not in out and 1 <= len(c) <=8:
+            out.append(c)
+            if len(out)>=limit*2:
+                break
+    # 長さ差が小さいものから返す
+    out.sort(key=lambda x: (abs(len(x)-len(reading)), _lev(reading,x)))
+    return out[:limit]
+
+def pick_tricky_distractors(answer, pool_readings, forbid, synthetic_pool, rng, n=3):
+    # synthetic_pool は realistic_variants の結果が入る想定
+    candidates=[]
+    seen=set([answer]+list(forbid))
+    for r in pool_readings:
+        if r in seen: continue
+        if abs(len(r)-len(answer))>1: continue
+        if not KANA_RE.match(r): continue
+        candidates.append(r)
+    for r in synthetic_pool:
+        if r in seen or r in candidates: continue
+        if abs(len(r)-len(answer))>1: continue
+        candidates.append(r)
+    # 常識的な誤読は「実在する読み」なので、pool と realistic の両方を統合してスコア付け
+    # 現実的な誤読ほど高得点になるよう、realistic 由来は少しボーナス
+    realistic_set=set(synthetic_pool)
+    scored=[]
+    for c in candidates:
+        base=_confusion_score(answer,c)
+        if c in realistic_set:
+            base += 18  # 現実的な誤読(同じ漢字の別読み)を強く優先
+        # 実在語の読みはより自然なので、pool 由来で長さが同じならさらに加点
+        scored.append((base,c))
+    scored.sort(key=lambda t: (-t[0], rng.random()))
+    out=[]
+    for sc,c in scored:
+        if c in seen or c in out: continue
+        test_list=[answer]+out+[c]
+        rom=_romaji_many(test_list)
+        if len(set(rom))!=len(rom):
+            continue
+        out.append(c)
+        seen.add(c)
+        if len(out)>=n:
+            break
+    if len(out)<n:
+        extra_cands=[]
+        for r in pool_readings:
+            if r in seen or r==answer or r in out: continue
+            if abs(len(r)-len(answer))>2: continue
+            extra_cands.append(r)
+        for r in synthetic_pool:
+            if r in seen or r in out or r in extra_cands: continue
+            if abs(len(r)-len(answer))>2: continue
+            extra_cands.append(r)
+        rng.shuffle(extra_cands)
+        scored2=[(_confusion_score(answer,c)+(18 if c in realistic_set else 0),c) for c in extra_cands]
+        scored2.sort(key=lambda t: (-t[0], rng.random()))
+        for sc,c in scored2:
+            test_list=[answer]+out+[c]
+            rom=_romaji_many(test_list)
+            if len(set(rom))!=len(rom):
+                continue
+            out.append(c)
+            seen.add(c)
+            if len(out)>=n:
+                break
+    if len(out)<n:
+        for sc,c in scored:
+            if c in out or c in seen: continue
+            out.append(c)
+            if len(out)>=n:
+                break
+    return out[:n]
 
 def pick_random_readings(reading, pool_readings, forbid, rng, n, length_delta=1):
-    L = len(reading)
-    cands = [r for r in pool_readings
-             if abs(len(r) - L) <= length_delta and r != reading and r not in forbid]
-    rng.shuffle(cands)
-    return cands[:n]
+    # 旧互換: 空syntheticで委譲
+    return pick_tricky_distractors(reading, pool_readings, forbid, [], rng, n)
 
 
 # ---------------------------------------------------------------- synthesis
@@ -343,10 +737,11 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
             if not (1 <= len(reading) <= 7):
                 continue
             forbidden = set(r for r in readings if r != reading)
-            distr = swap_distractors(word, reading, kj, pool_ans, forbidden, rng)
-            need = 3 - len(distr)
-            if need > 0:
-                distr += pick_random_readings(reading, pool_ans, forbidden, rng, need)
+            # 常識的な誤読だけを厳選: 同じ漢字の別音/訓・連濁ミス由来
+            syn = _realistic_variants(word, reading, kj, rng)
+            # pool と併せて最も紛らわしい3つを厳選
+            distr = pick_tricky_distractors(reading, pool_ans, forbidden, syn, rng, 3)
+            # 最低でも swap が1つ入っていればさらに紛らわしいので、スコア順で入れ直し
             if try_add(word, reading, distr, 'w', forbidden):
                 n += 1
                 kanji_covered(word)
@@ -371,7 +766,9 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
             if not (1 <= len(answer) <= 6):
                 continue
             forbidden = set(reads) - {answer}
-            distr = pick_random_readings(answer, pool_ans, forbidden, rng, 3)
+            # 単漢字は別読みが自然な誤読
+            syn = _realistic_variants(ch, answer, kj, rng)
+            distr = pick_tricky_distractors(answer, pool_ans, forbidden, syn, rng, 3)
             if try_add(ch, answer, distr, 's', forbidden):
                 n += 1
         return n
@@ -409,7 +806,8 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
                 if not (1 <= len(answer) <= 6):
                     continue
                 forbidden = set(info['kun'] + info['on']) - {answer}
-                distr = pick_random_readings(answer, pool_ans, forbidden, rng, 3)
+                syn = _realistic_variants(ch, answer, kj, rng)
+                distr = pick_tricky_distractors(answer, pool_ans, forbidden, syn, rng, 3)
                 try_add(ch, answer, distr, 's', forbidden)
 
     return questions
