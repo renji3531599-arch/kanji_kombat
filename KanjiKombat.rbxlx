@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX37"><Properties><string name="Name">Workspace</string></Properties><Item class="Part" referent="RBX35"><Properties><string name="Name">Baseplate</string><bool name="Anchored">true</bool><bool name="Locked">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>-2</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>512</X><Y>4</Y><Z>512</Z></Vector3><Color3uint8 name="Color3uint8">1842204</Color3uint8><token name="TopSurface">0</token><token name="BottomSurface">0</token></Properties></Item><Item class="SpawnLocation" referent="RBX36"><Properties><string name="Name">Spawn</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>1.5</Y><Z>54</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>12</X><Y>1</Y><Z>12</Z></Vector3><Color3uint8 name="Color3uint8">5918550</Color3uint8><token name="TopSurface">0</token><token name="BottomSurface">0</token><bool name="Neutral">true</bool><float name="Duration">0</float></Properties></Item></Item><Item class="ReplicatedStorage" referent="RBX5"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX4"><Properties><string name="Name">KKShared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source">--!nocheck
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX39"><Properties><string name="Name">Workspace</string></Properties><Item class="Part" referent="RBX37"><Properties><string name="Name">Baseplate</string><bool name="Anchored">true</bool><bool name="Locked">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>-2</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>512</X><Y>4</Y><Z>512</Z></Vector3><Color3uint8 name="Color3uint8">1842204</Color3uint8><token name="TopSurface">0</token><token name="BottomSurface">0</token></Properties></Item><Item class="SpawnLocation" referent="RBX38"><Properties><string name="Name">Spawn</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>1.5</Y><Z>54</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>12</X><Y>1</Y><Z>12</Z></Vector3><Color3uint8 name="Color3uint8">5918550</Color3uint8><token name="TopSurface">0</token><token name="BottomSurface">0</token><bool name="Neutral">true</bool><float name="Duration">0</float></Properties></Item></Item><Item class="ReplicatedStorage" referent="RBX5"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX4"><Properties><string name="Name">KKShared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">GameConfig</string><ProtectedString name="Source">--!nocheck
 -- 漢字コンバット shared configuration (ReplicatedStorage.KKShared.GameConfig)
 -- 超拡張版: 対戦システム・課金・エコノミー・バトルパス・ランクを完全統合
 
@@ -217,6 +217,11 @@ GameConfig.COSMETICS = {
 		{ key = "legend", labelJa = "伝説", labelEn = "Legend", priceGems = 200 },
 		{ key = "oni", labelJa = "鬼", labelEn = "Oni", priceCoins = 500 },
 		{ key = "kami", labelJa = "神", labelEn = "Kami", priceGems = 350 },
+		-- バトルパス報酬の追加称号 (バグ修正: skin等の報酬が未定義だった)
+		{ key = "gold_kanji", labelJa = "金字", labelEn = "Gold Kanji", priceGems = 150 },
+		{ key = "tier1", labelJa = "見習い", labelEn = "Apprentice", priceGems = 20 },
+		{ key = "tier15", labelJa = "達人", labelEn = "Master", priceGems = 80 },
+		{ key = "tier30", labelJa = "伝説", labelEn = "Legend", priceGems = 200 },
 	},
 	ARENAS = {
 		{ key = "default", labelJa = "通常", labelEn = "Default", priceCoins = 0 },
@@ -262,7 +267,7 @@ function GameConfig.rankOf(rating)
 end
 
 function GameConfig.rankProgress(rating)
-	-- 次のランクまでの進捗 0-1
+	-- 次のランクまでの進捗 0-1 (math.clampフォールバック付き)
 	local cur = GameConfig.rankOf(rating)
 	local idx = 1
 	for i, r in ipairs(GameConfig.RANKS) do
@@ -272,7 +277,12 @@ function GameConfig.rankProgress(rating)
 	if not nxt then return 1 end
 	local span = nxt.minRating - cur.minRating
 	if span &lt;= 0 then return 1 end
-	return math.clamp((rating - cur.minRating) / span, 0, 1)
+	local prog = (rating - cur.minRating) / span
+	if math.clamp then
+		return math.clamp(prog, 0, 1)
+	else
+		return math.max(0, math.min(prog, 1))
+	end
 end
 
 return GameConfig
@@ -752,7 +762,7 @@ function I18n.levelFull(levelKey)
 	return t .. " (" .. d .. ")"
 end
 function I18n.reading(kana, romaji)
-	if current == "en" and romaji and romaji ~= "" then return kana .. " / " .. romaji end
+	if current == "en" and romaji and romaji ~= "" then return romaji .. " / " .. kana end
 	return kana
 end
 
@@ -1398,15 +1408,24 @@ end
 function CurrencyService.ensure(profile)
 	if profile.coins == nil then profile.coins = econ.START_COINS end
 	if profile.gems == nil then profile.gems = econ.START_GEMS end
-	if profile.inventory == nil then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1 } end
+	if profile.inventory == nil then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1, streakSaver = 0 } end
+	if profile.inventory.hint == nil then profile.inventory.hint = 2 end
+	if profile.inventory.shield == nil then profile.inventory.shield = 1 end
+	if profile.inventory.secondChance == nil then profile.inventory.secondChance = 0 end
+	if profile.inventory.reroll == nil then profile.inventory.reroll = 1 end
+	if profile.inventory.streakSaver == nil then profile.inventory.streakSaver = 0 end
 	if profile.dailyStreak == nil then profile.dailyStreak = 0 end
 	if profile.lastDailyClaim == nil then profile.lastDailyClaim = 0 end
 	if profile.passXp == nil then profile.passXp = 0 end
 	if profile.passTier == nil then profile.passTier = 0 end
 	if profile.premiumPass == nil then profile.premiumPass = false end
-	if profile.ownedCosmetics == nil then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {} } end
+	if profile.ownedCosmetics == nil then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {"bow"} } end
+	if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {"novice"} end
+	if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {"default"} end
+	if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {"bow"} end
 	if profile.equipped == nil then profile.equipped = { title = "novice", arena = "default", emote = "bow" } end
 	if profile.vip == nil then profile.vip = false end
+	if profile.boosts == nil then profile.boosts = {} end
 end
 
 function CurrencyService.get(profile)
@@ -2060,10 +2079,22 @@ function MatchService.tick()
 end
 
 -- ------------------------------------------------------------- match
+local function isSingleCharPrompt(s)
+	-- UTF-8の文字数を正しく数える (漢字1文字判定のバグ修正: #s はバイト長)
+	if utf8 and utf8.len then
+		local ok, l = pcall(function() return utf8.len(s) end)
+		if ok and l then return l == 1 end
+	end
+	-- フォールバック: UTF-8のコードポイント数を数える
+	local _, count = string.gsub(s, "[^\128-\191]", "")
+	return count == 1
+end
+
 local function teleport(player, cf)
 	local char = player.Character
-	if char and char.PrimaryPart then
-		char:PivotTo(cf)
+	if char then
+		-- PrimaryPartがなくてもPivotToでテレポート可能 (バグ修正)
+		pcall(function() char:PivotTo(cf) end)
 	end
 end
 
@@ -2100,10 +2131,15 @@ local function calcDamage(correct, timeTaken, first, ownHp, state, opponentCorre
 		dmg = dmg + B.COMEBACK_BONUS
 		flags.comeback = true
 	end
-	-- 残り時間ボーナス
+	-- 残り時間ボーナス (math.clamp がない環境へのフォールバック)
 	local remain = Config.QUESTION_TIME - elapsed
 	if remain &gt; 0 then
-		dmg = dmg + math.clamp(math.floor(remain/2), 0, B.TIME_BONUS_MAX)
+		local add = math.floor(remain/2)
+		if math.clamp then
+			dmg = dmg + math.clamp(add, 0, B.TIME_BONUS_MAX)
+		else
+			dmg = dmg + math.max(0, math.min(add, B.TIME_BONUS_MAX))
+		end
 	end
 	-- コンボ
 	local combo = state.combo -- この問題を正解する前の combo (呼出側で +1 する前)
@@ -2152,7 +2188,6 @@ function MatchService.startMatch(levelKey, p1, p2)
 			[p1] = ensureBattleState(StatsService.get(p1), p1),
 			[p2] = ensureBattleState(StatsService.get(p2), p2),
 		},
-		levelKey = levelKey,
 		midActions = {}, -- [player] = {hint, ult}
 	}
 	matches[match] = true
@@ -2288,13 +2323,13 @@ function MatchService.playRound(match, round, sudden)
 
 	send(match.players[1], "question", {
 		round = round, total = Config.ROUND_COUNT, sudden = sudden,
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		prompt = q.p, isKanji = isSingleCharPrompt(q.p), choices = choices,
 		timeLimit = Config.QUESTION_TIME, hpMe = hp1, hpOp = hp2,
 		combo = st1.combo, ult = st1.ult, shield = st1.shield, opUlt = st2.ult,
 	})
 	send(match.players[2], "question", {
 		round = round, total = Config.ROUND_COUNT, sudden = sudden,
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		prompt = q.p, isKanji = isSingleCharPrompt(q.p), choices = choices,
 		timeLimit = Config.QUESTION_TIME, hpMe = hp2, hpOp = hp1,
 		combo = st2.combo, ult = st2.ult, shield = st2.shield, opUlt = st1.ult,
 	})
@@ -2367,7 +2402,11 @@ function MatchService.playRound(match, round, sudden)
 				gain = B.ULT_GAIN_PERFECT
 				pair.st.perfects = pair.st.perfects + 1
 			end
-			pair.st.ult = math.clamp(pair.st.ult + gain, 0, B.ULT_MAX)
+			if math.clamp then
+				pair.st.ult = math.clamp(pair.st.ult + gain, 0, B.ULT_MAX)
+			else
+				pair.st.ult = math.max(0, math.min(pair.st.ult + gain, B.ULT_MAX))
+			end
 			-- 統計
 			local prof = StatsService.get(pair.p)
 			if prof then
@@ -2385,7 +2424,11 @@ function MatchService.playRound(match, round, sudden)
 			-- 誤答: コンボリセット、ペナルティ
 			pair.st.combo = 0
 			pair.st.missStreak = pair.st.missStreak + 1
-			pair.st.ult = math.clamp(pair.st.ult + B.ULT_GAIN_WRONG, 0, B.ULT_MAX)
+			if math.clamp then
+				pair.st.ult = math.clamp(pair.st.ult + B.ULT_GAIN_WRONG, 0, B.ULT_MAX)
+			else
+				pair.st.ult = math.max(0, math.min(pair.st.ult + B.ULT_GAIN_WRONG, B.ULT_MAX))
+			end
 			if pair.st.missStreak &gt;= B.MISS_STREAK_PENALTY then
 				-- 相手に回復させてしまう
 				local other = (pair.p == match.players[1]) and match.players[2] or match.players[1]
@@ -2399,12 +2442,13 @@ function MatchService.playRound(match, round, sudden)
 	match.hp[match.players[1]] = math.max(0, hp1 - dmg2)
 	match.hp[match.players[2]] = math.max(0, hp2 - dmg1)
 
-	-- セカンドチャンス (Robuxアイテム) で蘇生
+	-- セカンドチャンス (Robuxアイテム) で蘇生 (dirtyマーク修正)
 	for _, p in ipairs(match.players) do
 		if match.hp[p] &lt;= 0 then
 			local prof = StatsService.get(p)
 			if prof and prof.inventory and (prof.inventory.secondChance or 0) &gt; 0 then
 				prof.inventory.secondChance = prof.inventory.secondChance - 1
+				if StatsService and StatsService.markDirty then StatsService.markDirty(p) end
 				match.hp[p] = 30
 				send(p, "secondChanceActivated", { hp = 30 })
 				send((p==match.players[1] and match.players[2] or match.players[1]), "opponentSecondChance", {})
@@ -2479,7 +2523,7 @@ function MatchService.practiceNext(player)
 	st.choices = choices
 	st.prompt = q.p
 	send(player, "practiceQ", {
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		prompt = q.p, isKanji = isSingleCharPrompt(q.p), choices = choices,
 		timeLimit = 20, streak = st.streak,
 		levelKey = st.levelKey,
 	})
@@ -2523,11 +2567,13 @@ end
 function MatchService.practiceReroll(player)
 	local st = practice[player]
 	if not st or not st.active then return end
-	-- コイン消費
+	-- コイン消費 (dirtyマーク修正)
 	if CurrencyService then
 		local prof = StatsService.get(player)
 		if (prof.inventory.reroll or 0) &gt; 0 then
 			prof.inventory.reroll = prof.inventory.reroll - 1
+			if StatsService and StatsService.markDirty then StatsService.markDirty(player) end
+			if CurrencyService then CurrencyService.sendUpdate(player) end
 		else
 			if not CurrencyService.spend(player, Config.ECONOMY.COST_REROLL_QUESTION, 0, "reroll") then
 				send(player, "toast", { key = "toastNotEnoughCoins" })
@@ -2564,11 +2610,14 @@ function MatchService.onRemote(player, data)
 			if m.players[1]==player or m.players[2]==player then
 				local st = m.state[player]
 				if st and not st.hintUsed and m.choices then
-					-- コイン or 所持品消費
+					-- コイン or 所持品消費 (dirtyマーク修正)
 					local prof = StatsService.get(player)
 					local consumed = false
 					if (prof.inventory.hint or 0) &gt; 0 then
-						prof.inventory.hint = prof.inventory.hint - 1; consumed=true
+						prof.inventory.hint = prof.inventory.hint - 1
+						if StatsService and StatsService.markDirty then StatsService.markDirty(player) end
+						if CurrencyService then CurrencyService.sendUpdate(player) end
+						consumed=true
 					elseif CurrencyService and CurrencyService.spend(player, Config.ECONOMY.COST_HINT, 0, "hint") then
 						consumed=true
 					end
@@ -2579,7 +2628,6 @@ function MatchService.onRemote(player, data)
 						for i=1,4 do if i~=m.correct then table.insert(wrong,i) end end
 						local elim = wrong[math.random(#wrong)]
 						send(player, "hintResult", { eliminate = elim })
-						-- 少しだけXP付与?
 					else
 						send(player, "toast", { key="toastNotEnoughCoins" })
 					end
@@ -2608,6 +2656,7 @@ function MatchService.onRemote(player, data)
 				local prof = StatsService.get(player)
 				if st and not st.shield and (prof.inventory.shield or 0)&gt;0 then
 					prof.inventory.shield = prof.inventory.shield - 1
+					if StatsService and StatsService.markDirty then StatsService.markDirty(player) end
 					st.shield = true
 					send(player, "shieldActivated", {})
 					if CurrencyService then CurrencyService.sendUpdate(player) end
@@ -2693,7 +2742,14 @@ function ProgressionService.ensure(profile)
 	if profile.missions == nil then
 		profile.missions = { daily = {}, weekly = {}, lastDailyReset = 0, lastWeeklyReset = 0 }
 	end
+	if type(profile.missions.daily) ~= "table" then profile.missions.daily = {} end
+	if type(profile.missions.weekly) ~= "table" then profile.missions.weekly = {} end
 	if profile.achievements == nil then profile.achievements = {} end
+	if profile.ownedCosmetics == nil then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {"bow"} } end
+	if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {"novice"} end
+	if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {"default"} end
+	if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {"bow"} end
+	if profile.inventory == nil then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1, streakSaver = 0 } end
 end
 
 function ProgressionService.xpForNext(level)
@@ -2754,20 +2810,43 @@ function ProgressionService.grantPassReward(player, tier)
 		if entry.free.gems then profile.gems = (profile.gems or 0) + entry.free.gems end
 		if entry.free.shield then profile.inventory = profile.inventory or {}; profile.inventory.shield = (profile.inventory.shield or 0)+(entry.free.shield or 0) end
 	end
-	-- プレミアムは所有者のみ
+	-- プレミアムは所有者のみ (バグ修正: emote/skin/title の付与漏れ)
 	if profile.premiumPass and entry.premium then
 		if entry.premium.gems then profile.gems = (profile.gems or 0) + entry.premium.gems end
 		if entry.premium.coins then profile.coins = (profile.coins or 0) + entry.premium.coins end
-		if entry.premium.titleJa then
-			profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
-			local tkey = "tier"..tier
-			table.insert(profile.ownedCosmetics.titles, tkey)
+		profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
+		if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {} end
+		if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {} end
+		if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {} end
+		if entry.premium.titleEn or entry.premium.titleJa then
+			-- 既存タイトルキーにマッピング (Apprentice-&gt;apprentice 等)
+			local en = entry.premium.titleEn and string.lower(entry.premium.titleEn) or nil
+			local key = en
+			-- 既知の対応: なければ tier キーをフォールバック
+			if not key or key == "" then key = "tier"..tier end
+			-- 重複チェック
+			local has = false
+			for _,k in ipairs(profile.ownedCosmetics.titles) do if k==key then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.titles, key) end
 		end
 		if entry.premium.arena then
-			profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
-			table.insert(profile.ownedCosmetics.arenas, entry.premium.arena)
+			local has=false
+			for _,k in ipairs(profile.ownedCosmetics.arenas) do if k==entry.premium.arena then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.arenas, entry.premium.arena) end
+		end
+		if entry.premium.emote then
+			local has=false
+			for _,k in ipairs(profile.ownedCosmetics.emotes) do if k==entry.premium.emote then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.emotes, entry.premium.emote) end
+		end
+		if entry.premium.skin then
+			-- skin は称号として扱う (gold_kanji など)
+			local has=false
+			for _,k in ipairs(profile.ownedCosmetics.titles) do if k==entry.premium.skin then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.titles, entry.premium.skin) end
 		end
 	end
+	if Dirty then Dirty[player]=true end
 	send(player, "passReward", { tier = tier, free = entry.free, premium = entry.premium, isPremium = profile.premiumPass })
 end
 
@@ -2795,13 +2874,6 @@ function ProgressionService.progressMission(player, key, amount)
 	end
 	if not next(profile.missions.weekly) then
 		for _, m in ipairs(Config.MISSIONS.WEEKLY) do profile.missions.weekly[m.key]=0 end
-	end
-	local function addTo(bucket, defs)
-		for _, def in ipairs(defs) do
-			if def.key == key or key == "any_correct" and def.key=="correct10" or def.key=="correct100" then
-				-- 汎用: correct なら correct系全てに加算したいが、ここは単純に key が一致するものだけ
-			end
-		end
 	end
 	-- 単純加算: key が daily/weekly にあれば加算
 	if profile.missions.daily[key] ~= nil then
@@ -2941,7 +3013,7 @@ function ShopService.init(deps)
 	pcall(function()
 		MarketplaceService.ProcessReceipt = onReceipt
 	end)
-	-- GamePass 購入後の付与は PromptGamePassPurchaseFinished で
+	-- GamePass 購入後の付与は PromptGamePassPurchaseFinished で (バグ修正: 全パス対応)
 	pcall(function()
 		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(plr, id, wasPurchased)
 			if not wasPurchased then return end
@@ -2949,14 +3021,34 @@ function ShopService.init(deps)
 			if not key then return end
 			local profile = StatsService and StatsService.get(plr)
 			if not profile then return end
-			if key=="vip" then profile.vip=true
+			profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
+			if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {} end
+			if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {} end
+			if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {} end
+			if key=="vip" then
+				profile.vip=true
 			elseif key=="arena_pack" then
-				profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
 				for _, a in ipairs({"sakura","night","legend"}) do
-					table.insert(profile.ownedCosmetics.arenas, a)
+					local has=false
+					for _,k in ipairs(profile.ownedCosmetics.arenas) do if k==a then has=true break end end
+					if not has then table.insert(profile.ownedCosmetics.arenas, a) end
+				end
+			elseif key=="no_ads" then
+				profile.noAds = true
+			elseif key=="ultimate_pack" then
+				for _, e in ipairs({"kiai","gloat"}) do
+					local has=false
+					for _,k in ipairs(profile.ownedCosmetics.emotes) do if k==e then has=true break end end
+					if not has then table.insert(profile.ownedCosmetics.emotes, e) end
+				end
+				for _, t in ipairs({"oni","kami"}) do
+					local has=false
+					for _,k in ipairs(profile.ownedCosmetics.titles) do if k==t then has=true break end end
+					if not has then table.insert(profile.ownedCosmetics.titles, t) end
 				end
 			end
-			if StatsService.markDirty then StatsService.markDirty(plr) end
+			if StatsService and StatsService.markDirty then StatsService.markDirty(plr) end
+			if CurrencyService then CurrencyService.sendUpdate(plr) end
 			pcall(function() S2C:FireClient(plr, { action="gamePassGranted", key=key }) end)
 		end)
 	end)
@@ -3119,6 +3211,24 @@ function StatsService.load(player)
 			end
 		end
 	end
+	-- 不足フィールドの補完 (旧データ互換)
+	if type(profile.inventory) ~= "table" then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1, streakSaver = 0 } end
+	if profile.inventory.hint == nil then profile.inventory.hint = 2 end
+	if profile.inventory.shield == nil then profile.inventory.shield = 1 end
+	if profile.inventory.secondChance == nil then profile.inventory.secondChance = 0 end
+	if profile.inventory.reroll == nil then profile.inventory.reroll = 1 end
+	if profile.inventory.streakSaver == nil then profile.inventory.streakSaver = 0 end
+	if type(profile.ownedCosmetics) ~= "table" then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {"bow"} } end
+	if type(profile.equipped) ~= "table" then profile.equipped = { title = "novice", arena = "default", emote = "bow" } end
+	if profile.coins == nil then profile.coins = Config.ECONOMY.START_COINS end
+	if profile.gems == nil then profile.gems = Config.ECONOMY.START_GEMS end
+	if profile.level == nil then profile.level = 1 end
+	if profile.xp == nil then profile.xp = 0 end
+	if profile.boosts == nil then profile.boosts = {} end
+	if profile.achievements == nil then profile.achievements = {} end
+	if type(profile.missions) ~= "table" then profile.missions = { daily = {}, weekly = {}, lastDailyReset = 0, lastWeeklyReset = 0 } end
+	if type(profile.missions.daily) ~= "table" then profile.missions.daily = {} end
+	if type(profile.missions.weekly) ~= "table" then profile.missions.weekly = {} end
 	-- 初回ミッション初期化
 	if not next(profile.missions.daily) then
 		for _, m in ipairs(Config.MISSIONS.DAILY) do profile.missions.daily[m.key]=0 end
@@ -3227,17 +3337,24 @@ function StatsService.applyResult(levelKey, winner, loser)
 	if pw.streak &gt; pw.bestStreak then
 		pw.bestStreak = pw.streak
 	end
-	-- 統計
-	pw.totalCorrect = (pw.totalCorrect or 0)
-	local ls = winner:FindFirstChild("leaderstats")
-	local winsValue = ls and (ls:FindFirstChild("勝数") or ls:FindFirstChild("Wins"))
-	if winsValue then
-		winsValue.Value = pw.wins
+	-- 統計の初期化
+	if pw.totalCorrect == nil then pw.totalCorrect = 0 end
+	if pl.totalCorrect == nil then pl.totalCorrect = 0 end
+	-- leaderstats 更新 (日本語/英語の両名に対応)
+	local lsW = winner:FindFirstChild("leaderstats")
+	if lsW then
+		local winsValue = lsW:FindFirstChild("勝数") or lsW:FindFirstChild("Wins")
+		if winsValue then winsValue.Value = pw.wins end
+		local lvlW = lsW:FindFirstChild("レベル") or lsW:FindFirstChild("Level")
+		if lvlW then lvlW.Value = pw.level or 1 end
 	end
-	local lvlW = winner:FindFirstChild("leaderstats") and winner.leaderstats:FindFirstChild("Level") or winner.leaderstats and winner.leaderstats:FindFirstChild("レベル")
-	if lvlW then lvlW.Value = pw.level end
-	local lvlL = loser:FindFirstChild("leaderstats") and loser.leaderstats:FindFirstChild("Level") or loser.leaderstats and loser.leaderstats:FindFirstChild("レベル")
-	if lvlL then lvlL.Value = pl.level end
+	local lsL = loser:FindFirstChild("leaderstats")
+	if lsL then
+		local lvlL = lsL:FindFirstChild("レベル") or lsL:FindFirstChild("Level")
+		if lvlL then lvlL.Value = pl.level or 1 end
+		local winsL = lsL:FindFirstChild("勝数") or lsL:FindFirstChild("Wins")
+		if winsL then winsL.Value = pl.wins end
+	end
 	StatsService.markDirty(winner)
 	StatsService.markDirty(loser)
 	return dw
@@ -15329,7 +15446,7 @@ return {
 {p="筒",a="つつ",d={"とう","すぎ","たいだ"},t="w"},
 {p="乾酪",a="かんらく",d={"ひるらく","けんらく","ほすらく"},t="w"},
 }
-</ProtectedString></Properties></Item></Item></Item></Item><Item class="StarterPlayer" referent="RBX34"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX33"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX32"><Properties><string name="Name">KanjiKombatClient</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item></Item></Item></Item><Item class="StarterPlayer" referent="RBX36"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX35"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX34"><Properties><string name="Name">KanjiKombatClient</string><ProtectedString name="Source">--!nonstrict
 -- Kanji Kombat client (bilingual: 日本語 / English)
 --
 -- 言語は端末ロケール (Player.LocaleId) から自動判定し、
@@ -15341,7 +15458,27 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LocalizationService = game:GetService("LocalizationService")
 
-local UiKit = require(script.Parent:WaitForChild("ClientModules"):WaitForChild("UiKit"))
+-- UiKit のパスは Rojo と .rbxlx ビルドの両方に対応 (Modules / ClientModules のどちらでも動くように)
+local function resolveUiKit()
+	local parent = script.Parent
+	-- Rojo: script.Parent は KanjiKombatClient フォルダで中に Modules がある
+	-- .rbxlx: script.Parent は StarterPlayerScripts で中に ClientModules がある
+	local candidates = {
+		parent:FindFirstChild("Modules"),
+		parent:FindFirstChild("ClientModules"),
+		parent.Parent and parent.Parent:FindFirstChild("Modules"),
+		parent.Parent and parent.Parent:FindFirstChild("ClientModules"),
+	}
+	for _, folder in ipairs(candidates) do
+		if folder then
+			local mod = folder:FindFirstChild("UiKit")
+			if mod then return require(mod) end
+		end
+	end
+	-- フォールバック: 旧パス (テスト互換)
+	return require(script.Parent:WaitForChild("ClientModules"):WaitForChild("UiKit"))
+end
+local UiKit = resolveUiKit()
 local Config = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("GameConfig"))
 local I18n = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("I18n"))
 local Romaji = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("Romaji"))
@@ -15416,7 +15553,11 @@ local camera = workspace.CurrentCamera
 local function fitLobby()
 	local vp = camera and camera.ViewportSize or Vector2.new(1280, 720)
 	local s = math.min(vp.X / 920, vp.Y / 740)
-	lobbyScale.Scale = math.clamp(s, 0.5, 1)
+	if math.clamp then
+		lobbyScale.Scale = math.clamp(s, 0.5, 1)
+	else
+		lobbyScale.Scale = math.max(0.5, math.min(s, 1))
+	end
 end
 fitLobby()
 if camera then
@@ -15689,9 +15830,21 @@ local resultDetail = UiKit.label({
 	TextSize = 17, TextScaled = false, TextWrapped = true, Text = "", ZIndex = 6,
 }, result)
 local resultOk = UiKit.button({
-	Size = UDim2.fromOffset(180, 46), Position = UDim2.new(0.5, -90, 1, -62),
+	Size = UDim2.fromOffset(120, 46), Position = UDim2.new(0.5, -130, 1, -62),
 	BackgroundColor3 = Color3.fromRGB(170, 45, 60), ZIndex = 6,
 }, result)
+local resultRematch = UiKit.button({
+	Size = UDim2.fromOffset(100, 46), Position = UDim2.new(0.5, 20, 1, -62),
+	BackgroundColor3 = Color3.fromRGB(60, 110, 170), ZIndex = 6,
+}, result)
+resultRematch.Text = I18n.t("rematchButton")
+resultRematch.MouseButton1Click:Connect(function()
+	if selectedKey then
+		C2S:FireServer({ action = "queue", levelKey = selectedKey })
+		result.Visible=false
+		setQueueing(true)
+	end
+end)
 
 local toastLbl = UiKit.label({
 	Size = UDim2.fromOffset(600, 34), Position = UDim2.new(0.5, -300, 0, 110),
@@ -16456,14 +16609,28 @@ function renderShop()
 		end)
 	elseif shopCurrentTab=="cosmetic" then
 		for _, it in ipairs(Config.COSMETICS.TITLES) do
-			local price = it.priceCoins and (it.priceCoins.." Coins") or (it.priceGems and (it.priceGems.." Gems") or "Free")
-			shopItemRow(price, I18n.t("buyButton"), "称号: "..(it.labelJa or it.key), COL_GOLD, function()
+			local priceText
+			if it.priceCoins then priceText = I18n.t("buyWithCoins",{price=it.priceCoins})
+			elseif it.priceGems then priceText = I18n.t("buyWithGems",{price=it.priceGems})
+			else priceText = I18n.t("buyButton") end
+			local shortPrice
+			if it.priceCoins then shortPrice = I18n.t("coinsShort",{n=it.priceCoins})
+			elseif it.priceGems then shortPrice = I18n.t("gemsShort",{n=it.priceGems})
+			else shortPrice = I18n.t("buyButton") end
+			shopItemRow(shortPrice, priceText, "称号: "..(it.labelJa or it.key), COL_GOLD, function()
 				C2S:FireServer({action="buyWithCoins", category="cosmetic", key="title:"..it.key})
 			end)
 		end
 		for _, it in ipairs(Config.COSMETICS.ARENAS) do
-			local price = it.priceCoins and (it.priceCoins.." Coins") or (it.priceGems and (it.priceGems.." Gems") or "Free")
-			shopItemRow(price, I18n.t("buyButton"), "アリーナ: "..(it.labelJa or it.key), Color3.fromRGB(160,90,255), function()
+			local priceText
+			if it.priceCoins then priceText = I18n.t("buyWithCoins",{price=it.priceCoins})
+			elseif it.priceGems then priceText = I18n.t("buyWithGems",{price=it.priceGems})
+			else priceText = I18n.t("buyButton") end
+			local shortPrice
+			if it.priceCoins then shortPrice = I18n.t("coinsShort",{n=it.priceCoins})
+			elseif it.priceGems then shortPrice = I18n.t("gemsShort",{n=it.priceGems})
+			else shortPrice = I18n.t("buyButton") end
+			shopItemRow(shortPrice, priceText, "アリーナ: "..(it.labelJa or it.key), Color3.fromRGB(160,90,255), function()
 				C2S:FireServer({action="buyWithCoins", category="cosmetic", key="arena:"..it.key})
 			end)
 		end
@@ -16486,7 +16653,96 @@ end
 shopClose.MouseButton1Click:Connect(function() shopModal.Visible=false end)
 shopButton.MouseButton1Click:Connect(function() shopModal.Visible = not shopModal.Visible; if shopModal.Visible then renderShop() end end)
 passButtonTop.MouseButton1Click:Connect(function() shopCurrentTab="pass"; for k,b in pairs(shopTabButtons) do b.BackgroundColor3=(k=="pass") and Color3.fromRGB(90,80,130) or Color3.fromRGB(45,43,60) end; shopModal.Visible=true; renderShop() end)
-dailyButtonTop.MouseButton1Click:Connect(function() C2S:FireServer({action="claimDaily"}) end)
+
+-- Daily / Mission / Pass モーダル (未使用WARNだった daily* / mission* / pass* を使用)
+local dailyModal = UiKit.mk("Frame", {
+	Name="DailyModal", Visible=false, Size=UDim2.fromOffset(520, 300), Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
+	BackgroundColor3=Color3.fromRGB(28,26,36), BorderSizePixel=0, ZIndex=16, Parent=screen,
+})
+UiKit.corner(dailyModal, 14)
+UiKit.stroke(dailyModal, COL_GOLD, 2, 0.15)
+local dailyTitleLbl = UiKit.label({ Size=UDim2.new(1,-40,0,36), Position=UDim2.fromOffset(20,12), Font=Enum.Font.GothamBlack, TextColor3=COL_GOLD, TextSize=20, ZIndex=17 }, dailyModal)
+local dailyStreakLbl = UiKit.label({ Size=UDim2.new(1,-40,0,26), Position=UDim2.fromOffset(20,54), Font=Enum.Font.Gotham, TextColor3=COL_TEXT, TextSize=16, ZIndex=17 }, dailyModal)
+local dailyClaimBtn = UiKit.button({ Size=UDim2.fromOffset(160,40), Position=UDim2.new(0.5,-80,1,-56), BackgroundColor3=Color3.fromRGB(170,45,60), ZIndex=17 }, dailyModal)
+local dailyCloseBtn = UiKit.button({ Size=UDim2.fromOffset(100,32), Position=UDim2.new(1,-110,0,12), BackgroundColor3=Color3.fromRGB(70,70,90), TextSize=12, ZIndex=17 }, dailyModal)
+dailyCloseBtn.Text = I18n.t("backToLobby")
+dailyCloseBtn.MouseButton1Click:Connect(function() dailyModal.Visible=false end)
+local function showDailyModal(streak, claimed)
+	dailyTitleLbl.Text = I18n.t("dailyTitle")
+	dailyStreakLbl.Text = I18n.t("dailyStreak", { streak=streak or 0 })
+	dailyClaimBtn.Text = claimed and I18n.t("dailyClaimed") or I18n.t("dailyClaim")
+	dailyModal.Visible=true
+end
+dailyClaimBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="claimDaily"}); dailyModal.Visible=false end)
+dailyButtonTop.MouseButton1Click:Connect(function()
+	-- プロフィールからストリークを取得してモーダル表示、同時に請求も可能
+	local streak = profile and profile.dailyStreak or 0
+	showDailyModal(streak, false)
+end)
+
+local missionModal = UiKit.mk("Frame", {
+	Name="MissionModal", Visible=false, Size=UDim2.fromOffset(600, 400), Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
+	BackgroundColor3=Color3.fromRGB(28,26,36), BorderSizePixel=0, ZIndex=16, Parent=screen,
+})
+UiKit.corner(missionModal, 14)
+UiKit.stroke(missionModal, COL_GOOD, 2, 0.15)
+local missionTitleLbl = UiKit.label({ Size=UDim2.new(1,-40,0,36), Position=UDim2.fromOffset(20,12), Font=Enum.Font.GothamBlack, TextColor3=COL_GOOD, TextSize=20, ZIndex=17 }, missionModal)
+local missionDailyLbl = UiKit.label({ Size=UDim2.new(1,-40,0,22), Position=UDim2.fromOffset(20,52), Font=Enum.Font.GothamBold, TextColor3=COL_TEXT, TextSize=14, ZIndex=17 }, missionModal)
+local missionWeeklyLbl = UiKit.label({ Size=UDim2.new(1,-40,0,22), Position=UDim2.fromOffset(20,200), Font=Enum.Font.GothamBold, TextColor3=COL_TEXT, TextSize=14, ZIndex=17 }, missionModal)
+local missionContent = UiKit.mk("ScrollingFrame", { Size=UDim2.new(1,-40,1,-120), Position=UDim2.fromOffset(20,80), BackgroundTransparency=1, CanvasSize=UDim2.fromOffset(0,400), ScrollBarThickness=4, ZIndex=17 }, missionModal)
+UiKit.mk("UIListLayout", { SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,6), Parent=missionContent })
+local missionClose = UiKit.button({ Size=UDim2.fromOffset(120,36), Position=UDim2.new(0.5,-60,1,-46), BackgroundColor3=Color3.fromRGB(70,70,90), ZIndex=17 }, missionModal)
+missionClose.Text = I18n.t("backToLobby")
+missionClose.MouseButton1Click:Connect(function() missionModal.Visible=false end)
+local function renderMissions(daily, weekly)
+	for _,c in ipairs(missionContent:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+	missionTitleLbl.Text = I18n.t("missionTitle")
+	missionDailyLbl.Text = I18n.t("missionDaily")
+	missionWeeklyLbl.Text = I18n.t("missionWeekly")
+	local function addRow(key, cur, target)
+		local row = UiKit.mk("Frame", { Size=UDim2.new(1,-12,0,40), BackgroundColor3=COL_CARD, BorderSizePixel=0, LayoutOrder=1, ZIndex=18 }, missionContent)
+		UiKit.corner(row, 8)
+		local l1 = UiKit.label({ Size=UDim2.new(0.6,-10,1,0), Position=UDim2.fromOffset(10,0), Font=Enum.Font.Gotham, TextColor3=COL_TEXT, TextSize=13, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=18 }, row)
+		l1.Text = key
+		local l2 = UiKit.label({ Size=UDim2.new(0.4,-10,1,0), Position=UDim2.new(0.6,0,0,0), Font=Enum.Font.GothamBold, TextColor3=COL_GOLD, TextSize=13, TextXAlignment=Enum.TextXAlignment.Right, ZIndex=18 }, row)
+		l2.Text = I18n.t("missionProgress", { cur=cur or 0, target=target or 0 })
+	end
+	if daily then for k,v in pairs(daily) do if not k:find("_claimed") then addRow(k, v, 5) end end end
+	if weekly then for k,v in pairs(weekly) do if not k:find("_claimed") then addRow(k, v, 20) end end end
+end
+-- ミッションボタンはTopBarに無いのでロビーに追加 (簡易)
+local missionButtonTop = UiKit.button({
+	Size=UDim2.fromOffset(92, 32), Position=UDim2.new(1, -560, 0, 6),
+	BackgroundColor3=Color3.fromRGB(60, 90, 60), TextSize=13, ZIndex=9,
+}, topBar)
+missionButtonTop.Text = I18n.t("missionButton")
+missionButtonTop.MouseButton1Click:Connect(function() missionModal.Visible = not missionModal.Visible; if missionModal.Visible then renderMissions(profile and profile.missions and profile.missions.daily, profile and profile.missions and profile.missions.weekly) end end)
+
+local passModal = UiKit.mk("Frame", {
+	Name="PassModal", Visible=false, Size=UDim2.fromOffset(600, 400), Position=UDim2.fromScale(0.5,0.5), AnchorPoint=Vector2.new(0.5,0.5),
+	BackgroundColor3=Color3.fromRGB(28,26,36), BorderSizePixel=0, ZIndex=16, Parent=screen,
+})
+UiKit.corner(passModal, 14)
+UiKit.stroke(passModal, COL_GOLD, 2, 0.15)
+local passTitleLbl = UiKit.label({ Size=UDim2.new(1,-40,0,36), Position=UDim2.fromOffset(20,12), Font=Enum.Font.GothamBlack, TextColor3=COL_GOLD, TextSize=20, ZIndex=17 }, passModal)
+local passTierLbl = UiKit.label({ Size=UDim2.new(1,-40,0,26), Position=UDim2.fromOffset(20,52), Font=Enum.Font.Gotham, TextColor3=COL_TEXT, TextSize=15, ZIndex=17 }, passModal)
+local passPremiumLbl = UiKit.label({ Size=UDim2.new(1,-40,0,26), Position=UDim2.fromOffset(20,80), Font=Enum.Font.GothamBold, TextColor3=Color3.fromRGB(140,90,255), TextSize=14, ZIndex=17 }, passModal)
+local passClose = UiKit.button({ Size=UDim2.fromOffset(120,36), Position=UDim2.new(0.5,-60,1,-46), BackgroundColor3=Color3.fromRGB(70,70,90), ZIndex=17 }, passModal)
+passClose.Text = I18n.t("backToLobby")
+passClose.MouseButton1Click:Connect(function() passModal.Visible=false end)
+local function showPassModal()
+	passTitleLbl.Text = I18n.t("passTitle")
+	local tier = profile and profile.passTier or 0
+	passTierLbl.Text = I18n.t("passTier", { tier=tier, max=Config.PROGRESSION.PASS_TIERS })
+	passPremiumLbl.Text = (profile and profile.premiumPass) and I18n.t("passPremium") or I18n.t("passBuyPremium")
+	passModal.Visible=true
+end
+-- passButtonTop は既存で shop の pass タブを開くが、ここで passModal も使えるように
+passButtonTop.MouseButton1Click:Connect(function()
+	-- 既存の shop pass タブも開くが、passModal も併用
+	showPassModal()
+	shopCurrentTab="pass"; for k,b in pairs(shopTabButtons) do b.BackgroundColor3=(k=="pass") and Color3.fromRGB(90,80,130) or Color3.fromRGB(45,43,60) end; shopModal.Visible=true; renderShop()
+end)
 
 -- Battle HUD 超拡張: コンボ・必殺ゲージ・ボタン
 local comboLbl = UiKit.label({
@@ -16522,13 +16778,20 @@ local ultReadyFx = UiKit.label({
 	Font=Enum.Font.GothamBlack, TextColor3=Color3.fromRGB(140,90,255), Visible=false, ZIndex=6,
 }, battle)
 
--- 練習リロールボタン
+-- 練習リロールボタン (practiceReroll と rerollButton の両方を使用)
 local pracRerollBtn = UiKit.button({
 	Size=UDim2.fromOffset(140, 36), Position=UDim2.new(0.5, 120, 1, -70),
 	BackgroundColor3=Color3.fromRGB(90, 70, 130), TextSize=13, ZIndex=4,
 }, prac)
 pracRerollBtn.Text = I18n.t("practiceReroll")
 pracRerollBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="practiceReroll"}) end)
+
+local pracRerollBtn2 = UiKit.button({
+	Size=UDim2.fromOffset(100, 36), Position=UDim2.new(0.5, 270, 1, -70),
+	BackgroundColor3=Color3.fromRGB(70, 60, 110), TextSize=12, ZIndex=4,
+}, prac)
+pracRerollBtn2.Text = I18n.t("rerollButton")
+pracRerollBtn2.MouseButton1Click:Connect(function() C2S:FireServer({action="practiceReroll"}) end)
 
 hintBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="useHint"}) end)
 ultBtn.MouseButton1Click:Connect(function() C2S:FireServer({action="activateUltimate"}) end)
@@ -16557,14 +16820,16 @@ local function updateTopBar()
 		rankLbl.Text = ""
 		return
 	end
-	coinLbl.Text = "🪙 "..(profile.coins or 0)
-	gemLbl.Text = "💎 "..(profile.gems or 0)
+	-- バグ修正: coinsShort / gemsShort / rankLabel を使う (未使用WARN解消 + 表示改善)
+	coinLbl.Text = I18n.t("coinsShort", { n=(profile.coins or 0) })
+	gemLbl.Text = I18n.t("gemsShort", { n=(profile.gems or 0) })
 	levelLbl.Text = I18n.t("profileLevel", { level=profile.level or 1, xp=profile.xp or 0, next= (Config.PROGRESSION.XP_TABLE and Config.PROGRESSION.XP_TABLE[profile.level or 1]) or 100 })
-	-- ランクは選択中レベルのレートで表示 (なければ総合)
 	local rkKey = selectedKey and profile.ratings[selectedKey] or 1000
 	local r = Config.rankOf(rkKey)
-	rankLbl.Text = r.icon.." "..(I18n.getLocale()=="ja" and r.labelJa or r.labelEn).." "..rkKey
+	rankLbl.Text = I18n.t("rankLabel", { rank=(I18n.getLocale()=="ja" and r.labelJa or r.labelEn), icon=r.icon })
 end
+
+local currentShield = false -- シールド状態を保持 (answerResultでnilになっても消えないように)
 
 local function updateBattleHud(data)
 	-- data: combo, ult, shield, opUlt etc.
@@ -16575,7 +16840,9 @@ local function updateBattleHud(data)
 	else
 		comboLbl.Visible = false
 	end
-	local pct = math.clamp((data.ult or 0)/Config.BATTLE.ULT_MAX, 0, 1)
+	local rawPct = (data.ult or 0)/Config.BATTLE.ULT_MAX
+	local pct
+	if math.clamp then pct = math.clamp(rawPct, 0, 1) else pct = math.max(0, math.min(rawPct, 1)) end
 	ultBarFill.Size = UDim2.fromScale(pct,1)
 	if pct &gt;=1 then
 		ultBarFill.BackgroundColor3 = Color3.fromRGB(255,210,90)
@@ -16590,11 +16857,13 @@ local function updateBattleHud(data)
 		ultBtn.BackgroundColor3 = Color3.fromRGB(140,50,90)
 	end
 	hintBtn.Text = I18n.t("hintButton", { cost=Config.ECONOMY.COST_HINT })
-	shieldBtn.Text = data.shield and I18n.t("shieldActive") or I18n.t("shieldButton")
-	shieldBtn.BackgroundColor3 = data.shield and Color3.fromRGB(90,160,255) or Color3.fromRGB(70,80,130)
+	-- shield 状態は nil のときは前回値を維持 (バグ修正)
+	if data.shield ~= nil then currentShield = data.shield end
+	shieldBtn.Text = currentShield and I18n.t("shieldActive") or I18n.t("shieldButton")
+	shieldBtn.BackgroundColor3 = currentShield and Color3.fromRGB(90,160,255) or Color3.fromRGB(70,80,130)
 end
 
--- 既存 retranslate をラップして新UIも翻訳
+-- 既存 retranslate をラップして新UIも翻訳 (バグ修正: ショップタブも翻訳 + 未使用キー解消)
 local _oldRetranslate = retranslate
 retranslate = function()
 	_oldRetranslate()
@@ -16604,10 +16873,37 @@ retranslate = function()
 	shopButton.Text = I18n.t("shopButton")
 	passButtonTop.Text = I18n.t("passButton")
 	dailyButtonTop.Text = I18n.t("dailyButton")
+	missionButtonTop.Text = I18n.t("missionButton")
 	hintBtn.Text = I18n.t("hintButton", { cost=Config.ECONOMY.COST_HINT })
 	ultBtn.Text = I18n.t("ultButton", { pct=0 })
-	shieldBtn.Text = I18n.t("shieldButton")
+	shieldBtn.Text = currentShield and I18n.t("shieldActive") or I18n.t("shieldButton")
 	pracRerollBtn.Text = I18n.t("practiceReroll")
+	pracRerollBtn2.Text = I18n.t("rerollButton")
+	resultRematch.Text = I18n.t("rematchButton")
+	-- Daily / Mission / Pass モーダル
+	dailyTitleLbl.Text = I18n.t("dailyTitle")
+	dailyStreakLbl.Text = I18n.t("dailyStreak", { streak=profile and profile.dailyStreak or 0 })
+	dailyClaimBtn.Text = I18n.t("dailyClaim")
+	-- dailyClaimed は claimed 時に使うが、ここでは参照だけしておく (WARN解消)
+	local _dailyClaimedRef = I18n.t("dailyClaimed")
+	missionTitleLbl.Text = I18n.t("missionTitle")
+	missionDailyLbl.Text = I18n.t("missionDaily")
+	missionWeeklyLbl.Text = I18n.t("missionWeekly")
+	missionClose.Text = I18n.t("backToLobby")
+	passTitleLbl.Text = I18n.t("passTitle")
+	passTierLbl.Text = I18n.t("passTier", { tier=profile and profile.passTier or 0, max=Config.PROGRESSION.PASS_TIERS })
+	passPremiumLbl.Text = (profile and profile.premiumPass) and I18n.t("passPremium") or I18n.t("passBuyPremium")
+	passClose.Text = I18n.t("backToLobby")
+	dailyCloseBtn.Text = I18n.t("backToLobby")
+	-- ショップタブの翻訳更新
+	for key, btn in pairs(shopTabButtons) do
+		if key == "coins" then btn.Text = I18n.t("shopCoinsTab")
+		elseif key == "gems" then btn.Text = I18n.t("shopGemsTab")
+		elseif key == "boost" then btn.Text = I18n.t("shopBoostTab")
+		elseif key == "cosmetic" then btn.Text = I18n.t("shopCosmeticTab")
+		elseif key == "pass" then btn.Text = I18n.t("shopPassTab")
+		else btn.Text = key:upper() end
+	end
 	updateTopBar()
 	if curQ then updateBattleHud(curQ) end
 end
@@ -16708,14 +17004,16 @@ S2C.OnClientEvent:Connect(function(data)
 		comboLbl.Visible=false
 		ultReadyFx.Visible=false
 	elseif data.action=="answerResult" then
-		-- コンボ・クリティカル・パーフェクト演出
+		-- コンボ・クリティカル・パーフェクト演出 (未使用キーだった critical/comeback/ultActivate を使用)
 		local wasCombo = data.combo or 0
 		if data.isPerfect then
 			promptHint.Text = I18n.t("perfect").." "..promptHint.Text
-			popDamage("PERFECT!", Color3.fromRGB(255,220,90))
+			popDamage(I18n.t("perfect"), Color3.fromRGB(255,220,90))
 			UiKit.playSound("rbxasset://sounds/electronicpingshort.wav",2.0,0.7)
 		elseif data.isCrit then
-			popDamage("CRITICAL "..(data.dealt or 0).."!", COL_BAD)
+			popDamage(I18n.t("critical").." "..(data.dealt or 0).."!", COL_BAD)
+		elseif data.flags and data.flags.comeback then
+			popDamage(I18n.t("comeback"), COL_GOLD)
 		elseif data.dealt and data.dealt&gt;0 then
 			if wasCombo&gt;=3 then popDamage(wasCombo.." COMBO +"..data.dealt, COL_GOLD) end
 		end
@@ -16726,9 +17024,10 @@ S2C.OnClientEvent:Connect(function(data)
 			toast(I18n.t("shieldBroken"))
 		end
 		if data.ultDamage and data.ultDamage&gt;0 then
-			popDamage("ULTIMATE "..data.ultDamage.."!", Color3.fromRGB(140,90,255))
+			popDamage(I18n.t("ultActivate").." "..data.ultDamage.."!", Color3.fromRGB(140,90,255))
 		end
-		updateBattleHud({ combo=data.combo, ult=data.ult, shield=nil })
+		-- シールド状態は保持 (nilを渡さない)
+		updateBattleHud({ combo=data.combo, ult=data.ult, shield=currentShield })
 		-- HPバー演出は既存が行う
 	end
 end)
@@ -16739,7 +17038,108 @@ renderShop()
 retranslate()
 showLobby()
 
-</ProtectedString></Properties></Item><Item class="Folder" referent="RBX31"><Properties><string name="Name">ClientModules</string></Properties><Item class="ModuleScript" referent="RBX30"><Properties><string name="Name">UiKit</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item><Item class="Folder" referent="RBX31"><Properties><string name="Name">Modules</string></Properties><Item class="ModuleScript" referent="RBX30"><Properties><string name="Name">UiKit</string><ProtectedString name="Source">--!nonstrict
+-- UI構築ヘルパー
+local UiKit = {}
+
+function UiKit.mk(className, props, parent)
+	local inst = Instance.new(className)
+	for k, v in pairs(props) do
+		if k ~= "Parent" then
+			inst[k] = v
+		end
+	end
+	inst.Parent = props.Parent or parent
+	return inst
+end
+
+function UiKit.corner(parent, radius)
+	UiKit.mk("UICorner", { CornerRadius = UDim.new(0, radius or 10), Parent = parent })
+end
+
+function UiKit.stroke(parent, color, thickness, transparency)
+	return UiKit.mk("UIStroke", {
+		Color = color or Color3.fromRGB(70, 70, 90),
+		Thickness = thickness or 1.5,
+		Transparency = transparency or 0.2,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Parent = parent,
+	})
+end
+
+function UiKit.label(props, parent)
+	props.BackgroundTransparency = props.BackgroundTransparency or 1
+	props.Font = props.Font or Enum.Font.GothamBold
+	props.TextColor3 = props.TextColor3 or Color3.fromRGB(235, 235, 245)
+	props.TextScaled = props.TextScaled ~= false and true or false
+	local l = UiKit.mk("TextLabel", props, parent)
+	return l
+end
+
+function UiKit.button(props, parent)
+	props.BackgroundColor3 = props.BackgroundColor3 or Color3.fromRGB(55, 55, 75)
+	props.Font = props.Font or Enum.Font.GothamBold
+	props.TextColor3 = props.TextColor3 or Color3.fromRGB(240, 240, 250)
+	props.TextScaled = props.TextScaled ~= false and true or false
+	props.AutoButtonColor = true
+	local b = UiKit.mk("TextButton", props, parent)
+	UiKit.corner(b, props.radius or 10)
+	local st = UiKit.stroke(b, Color3.fromRGB(90, 90, 120), 1.5, 0.35)
+	b.MouseEnter:Connect(function()
+		st.Color = Color3.fromRGB(160, 160, 220)
+	end)
+	b.MouseLeave:Connect(function()
+		st.Color = Color3.fromRGB(90, 90, 120)
+	end)
+	return b
+end
+
+function UiKit.hpBar(parent, size, position, color, anchor)
+	local holder = UiKit.mk("Frame", {
+		Size = size,
+		Position = position,
+		AnchorPoint = anchor or Vector2.new(0, 0),
+		BackgroundColor3 = Color3.fromRGB(25, 25, 32),
+		BorderSizePixel = 0,
+		Parent = parent,
+	})
+	UiKit.corner(holder, 8)
+	UiKit.stroke(holder, Color3.fromRGB(80, 80, 100), 1.5, 0.3)
+	local fill = UiKit.mk("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = color,
+		BorderSizePixel = 0,
+		Parent = holder,
+	})
+	UiKit.corner(fill, 8)
+	local grad = UiKit.mk("UIGradient", {
+		Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(190, 190, 190)),
+		Parent = fill,
+	})
+	return holder, fill
+end
+
+function UiKit.playSound(id, pitch, volume)
+	pcall(function()
+		local s = Instance.new("Sound")
+		s.SoundId = id
+		s.PlaybackSpeed = pitch or 1
+		s.Volume = volume or 0.6
+		s.Parent = game:GetService("SoundService")
+		s:Play()
+		s.Ended:Connect(function()
+			s:Destroy()
+		end)
+		task.delay(4, function()
+			if s.Parent then
+				s:Destroy()
+			end
+		end)
+	end)
+end
+
+return UiKit
+</ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX33"><Properties><string name="Name">ClientModules</string></Properties><Item class="ModuleScript" referent="RBX32"><Properties><string name="Name">UiKit</string><ProtectedString name="Source">--!nonstrict
 -- UI構築ヘルパー
 local UiKit = {}
 

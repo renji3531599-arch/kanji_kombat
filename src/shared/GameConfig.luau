@@ -216,6 +216,11 @@ GameConfig.COSMETICS = {
 		{ key = "legend", labelJa = "伝説", labelEn = "Legend", priceGems = 200 },
 		{ key = "oni", labelJa = "鬼", labelEn = "Oni", priceCoins = 500 },
 		{ key = "kami", labelJa = "神", labelEn = "Kami", priceGems = 350 },
+		-- バトルパス報酬の追加称号 (バグ修正: skin等の報酬が未定義だった)
+		{ key = "gold_kanji", labelJa = "金字", labelEn = "Gold Kanji", priceGems = 150 },
+		{ key = "tier1", labelJa = "見習い", labelEn = "Apprentice", priceGems = 20 },
+		{ key = "tier15", labelJa = "達人", labelEn = "Master", priceGems = 80 },
+		{ key = "tier30", labelJa = "伝説", labelEn = "Legend", priceGems = 200 },
 	},
 	ARENAS = {
 		{ key = "default", labelJa = "通常", labelEn = "Default", priceCoins = 0 },
@@ -261,7 +266,7 @@ function GameConfig.rankOf(rating)
 end
 
 function GameConfig.rankProgress(rating)
-	-- 次のランクまでの進捗 0-1
+	-- 次のランクまでの進捗 0-1 (math.clampフォールバック付き)
 	local cur = GameConfig.rankOf(rating)
 	local idx = 1
 	for i, r in ipairs(GameConfig.RANKS) do
@@ -271,7 +276,12 @@ function GameConfig.rankProgress(rating)
 	if not nxt then return 1 end
 	local span = nxt.minRating - cur.minRating
 	if span <= 0 then return 1 end
-	return math.clamp((rating - cur.minRating) / span, 0, 1)
+	local prog = (rating - cur.minRating) / span
+	if math.clamp then
+		return math.clamp(prog, 0, 1)
+	else
+		return math.max(0, math.min(prog, 1))
+	end
 end
 
 return GameConfig

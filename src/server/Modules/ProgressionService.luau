@@ -28,7 +28,14 @@ function ProgressionService.ensure(profile)
 	if profile.missions == nil then
 		profile.missions = { daily = {}, weekly = {}, lastDailyReset = 0, lastWeeklyReset = 0 }
 	end
+	if type(profile.missions.daily) ~= "table" then profile.missions.daily = {} end
+	if type(profile.missions.weekly) ~= "table" then profile.missions.weekly = {} end
 	if profile.achievements == nil then profile.achievements = {} end
+	if profile.ownedCosmetics == nil then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {"bow"} } end
+	if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {"novice"} end
+	if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {"default"} end
+	if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {"bow"} end
+	if profile.inventory == nil then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1, streakSaver = 0 } end
 end
 
 function ProgressionService.xpForNext(level)
@@ -89,20 +96,43 @@ function ProgressionService.grantPassReward(player, tier)
 		if entry.free.gems then profile.gems = (profile.gems or 0) + entry.free.gems end
 		if entry.free.shield then profile.inventory = profile.inventory or {}; profile.inventory.shield = (profile.inventory.shield or 0)+(entry.free.shield or 0) end
 	end
-	-- プレミアムは所有者のみ
+	-- プレミアムは所有者のみ (バグ修正: emote/skin/title の付与漏れ)
 	if profile.premiumPass and entry.premium then
 		if entry.premium.gems then profile.gems = (profile.gems or 0) + entry.premium.gems end
 		if entry.premium.coins then profile.coins = (profile.coins or 0) + entry.premium.coins end
-		if entry.premium.titleJa then
-			profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
-			local tkey = "tier"..tier
-			table.insert(profile.ownedCosmetics.titles, tkey)
+		profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
+		if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {} end
+		if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {} end
+		if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {} end
+		if entry.premium.titleEn or entry.premium.titleJa then
+			-- 既存タイトルキーにマッピング (Apprentice->apprentice 等)
+			local en = entry.premium.titleEn and string.lower(entry.premium.titleEn) or nil
+			local key = en
+			-- 既知の対応: なければ tier キーをフォールバック
+			if not key or key == "" then key = "tier"..tier end
+			-- 重複チェック
+			local has = false
+			for _,k in ipairs(profile.ownedCosmetics.titles) do if k==key then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.titles, key) end
 		end
 		if entry.premium.arena then
-			profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
-			table.insert(profile.ownedCosmetics.arenas, entry.premium.arena)
+			local has=false
+			for _,k in ipairs(profile.ownedCosmetics.arenas) do if k==entry.premium.arena then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.arenas, entry.premium.arena) end
+		end
+		if entry.premium.emote then
+			local has=false
+			for _,k in ipairs(profile.ownedCosmetics.emotes) do if k==entry.premium.emote then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.emotes, entry.premium.emote) end
+		end
+		if entry.premium.skin then
+			-- skin は称号として扱う (gold_kanji など)
+			local has=false
+			for _,k in ipairs(profile.ownedCosmetics.titles) do if k==entry.premium.skin then has=true break end end
+			if not has then table.insert(profile.ownedCosmetics.titles, entry.premium.skin) end
 		end
 	end
+	if Dirty then Dirty[player]=true end
 	send(player, "passReward", { tier = tier, free = entry.free, premium = entry.premium, isPremium = profile.premiumPass })
 end
 
@@ -130,13 +160,6 @@ function ProgressionService.progressMission(player, key, amount)
 	end
 	if not next(profile.missions.weekly) then
 		for _, m in ipairs(Config.MISSIONS.WEEKLY) do profile.missions.weekly[m.key]=0 end
-	end
-	local function addTo(bucket, defs)
-		for _, def in ipairs(defs) do
-			if def.key == key or key == "any_correct" and def.key=="correct10" or def.key=="correct100" then
-				-- 汎用: correct なら correct系全てに加算したいが、ここは単純に key が一致するものだけ
-			end
-		end
 	end
 	-- 単純加算: key が daily/weekly にあれば加算
 	if profile.missions.daily[key] ~= nil then

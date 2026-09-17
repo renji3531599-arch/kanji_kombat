@@ -39,7 +39,7 @@ function ShopService.init(deps)
 	pcall(function()
 		MarketplaceService.ProcessReceipt = onReceipt
 	end)
-	-- GamePass 購入後の付与は PromptGamePassPurchaseFinished で
+	-- GamePass 購入後の付与は PromptGamePassPurchaseFinished で (バグ修正: 全パス対応)
 	pcall(function()
 		MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(plr, id, wasPurchased)
 			if not wasPurchased then return end
@@ -47,14 +47,34 @@ function ShopService.init(deps)
 			if not key then return end
 			local profile = StatsService and StatsService.get(plr)
 			if not profile then return end
-			if key=="vip" then profile.vip=true
+			profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
+			if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {} end
+			if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {} end
+			if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {} end
+			if key=="vip" then
+				profile.vip=true
 			elseif key=="arena_pack" then
-				profile.ownedCosmetics = profile.ownedCosmetics or { titles={}, arenas={}, emotes={} }
 				for _, a in ipairs({"sakura","night","legend"}) do
-					table.insert(profile.ownedCosmetics.arenas, a)
+					local has=false
+					for _,k in ipairs(profile.ownedCosmetics.arenas) do if k==a then has=true break end end
+					if not has then table.insert(profile.ownedCosmetics.arenas, a) end
+				end
+			elseif key=="no_ads" then
+				profile.noAds = true
+			elseif key=="ultimate_pack" then
+				for _, e in ipairs({"kiai","gloat"}) do
+					local has=false
+					for _,k in ipairs(profile.ownedCosmetics.emotes) do if k==e then has=true break end end
+					if not has then table.insert(profile.ownedCosmetics.emotes, e) end
+				end
+				for _, t in ipairs({"oni","kami"}) do
+					local has=false
+					for _,k in ipairs(profile.ownedCosmetics.titles) do if k==t then has=true break end end
+					if not has then table.insert(profile.ownedCosmetics.titles, t) end
 				end
 			end
-			if StatsService.markDirty then StatsService.markDirty(plr) end
+			if StatsService and StatsService.markDirty then StatsService.markDirty(plr) end
+			if CurrencyService then CurrencyService.sendUpdate(plr) end
 			pcall(function() S2C:FireClient(plr, { action="gamePassGranted", key=key }) end)
 		end)
 	end)

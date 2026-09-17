@@ -24,15 +24,24 @@ end
 function CurrencyService.ensure(profile)
 	if profile.coins == nil then profile.coins = econ.START_COINS end
 	if profile.gems == nil then profile.gems = econ.START_GEMS end
-	if profile.inventory == nil then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1 } end
+	if profile.inventory == nil then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1, streakSaver = 0 } end
+	if profile.inventory.hint == nil then profile.inventory.hint = 2 end
+	if profile.inventory.shield == nil then profile.inventory.shield = 1 end
+	if profile.inventory.secondChance == nil then profile.inventory.secondChance = 0 end
+	if profile.inventory.reroll == nil then profile.inventory.reroll = 1 end
+	if profile.inventory.streakSaver == nil then profile.inventory.streakSaver = 0 end
 	if profile.dailyStreak == nil then profile.dailyStreak = 0 end
 	if profile.lastDailyClaim == nil then profile.lastDailyClaim = 0 end
 	if profile.passXp == nil then profile.passXp = 0 end
 	if profile.passTier == nil then profile.passTier = 0 end
 	if profile.premiumPass == nil then profile.premiumPass = false end
-	if profile.ownedCosmetics == nil then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {} } end
+	if profile.ownedCosmetics == nil then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {"bow"} } end
+	if type(profile.ownedCosmetics.titles) ~= "table" then profile.ownedCosmetics.titles = {"novice"} end
+	if type(profile.ownedCosmetics.arenas) ~= "table" then profile.ownedCosmetics.arenas = {"default"} end
+	if type(profile.ownedCosmetics.emotes) ~= "table" then profile.ownedCosmetics.emotes = {"bow"} end
 	if profile.equipped == nil then profile.equipped = { title = "novice", arena = "default", emote = "bow" } end
 	if profile.vip == nil then profile.vip = false end
+	if profile.boosts == nil then profile.boosts = {} end
 end
 
 function CurrencyService.get(profile)

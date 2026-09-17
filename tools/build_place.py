@@ -76,12 +76,18 @@ def build():
 
     # ----- StarterPlayer
     client_files = sorted(f for f in os.listdir(CLIENT_MODULES) if f.endswith('.luau'))
-    client_modules = folder('ClientModules', ''.join(
+    # Rojo との互換性のため Modules という名前で出力 (旧 ClientModules もクライアント側でフォールバック対応)
+    client_modules = folder('Modules', ''.join(
+        script_item('ModuleScript', f[:-5], 'src/client/Modules/%s' % f)
+        for f in client_files
+    ))
+    # 旧名 ClientModules も同時に含めて完全互換 (実機では Modules を優先)
+    client_modules_legacy = folder('ClientModules', ''.join(
         script_item('ModuleScript', f[:-5], 'src/client/Modules/%s' % f)
         for f in client_files
     ))
     sps = item('StarterPlayerScripts', 'StarterPlayerScripts', children=(
-        script_item('LocalScript', 'KanjiKombatClient', 'src/client/KanjiKombatClient.client.luau') + client_modules
+        script_item('LocalScript', 'KanjiKombatClient', 'src/client/KanjiKombatClient.client.luau') + client_modules + client_modules_legacy
     ))
     starter = item('StarterPlayer', 'StarterPlayer', children=sps)
 

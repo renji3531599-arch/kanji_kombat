@@ -474,7 +474,7 @@ function I18n.levelFull(levelKey)
 	return t .. " (" .. d .. ")"
 end
 function I18n.reading(kana, romaji)
-	if current == "en" and romaji and romaji ~= "" then return kana .. " / " .. romaji end
+	if current == "en" and romaji and romaji ~= "" then return romaji .. " / " .. kana end
 	return kana
 end
 

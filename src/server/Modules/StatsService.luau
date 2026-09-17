@@ -110,6 +110,24 @@ function StatsService.load(player)
 			end
 		end
 	end
+	-- 不足フィールドの補完 (旧データ互換)
+	if type(profile.inventory) ~= "table" then profile.inventory = { hint = 2, shield = 1, secondChance = 0, reroll = 1, streakSaver = 0 } end
+	if profile.inventory.hint == nil then profile.inventory.hint = 2 end
+	if profile.inventory.shield == nil then profile.inventory.shield = 1 end
+	if profile.inventory.secondChance == nil then profile.inventory.secondChance = 0 end
+	if profile.inventory.reroll == nil then profile.inventory.reroll = 1 end
+	if profile.inventory.streakSaver == nil then profile.inventory.streakSaver = 0 end
+	if type(profile.ownedCosmetics) ~= "table" then profile.ownedCosmetics = { titles = {"novice"}, arenas = {"default"}, emotes = {"bow"} } end
+	if type(profile.equipped) ~= "table" then profile.equipped = { title = "novice", arena = "default", emote = "bow" } end
+	if profile.coins == nil then profile.coins = Config.ECONOMY.START_COINS end
+	if profile.gems == nil then profile.gems = Config.ECONOMY.START_GEMS end
+	if profile.level == nil then profile.level = 1 end
+	if profile.xp == nil then profile.xp = 0 end
+	if profile.boosts == nil then profile.boosts = {} end
+	if profile.achievements == nil then profile.achievements = {} end
+	if type(profile.missions) ~= "table" then profile.missions = { daily = {}, weekly = {}, lastDailyReset = 0, lastWeeklyReset = 0 } end
+	if type(profile.missions.daily) ~= "table" then profile.missions.daily = {} end
+	if type(profile.missions.weekly) ~= "table" then profile.missions.weekly = {} end
 	-- 初回ミッション初期化
 	if not next(profile.missions.daily) then
 		for _, m in ipairs(Config.MISSIONS.DAILY) do profile.missions.daily[m.key]=0 end
@@ -218,17 +236,24 @@ function StatsService.applyResult(levelKey, winner, loser)
 	if pw.streak > pw.bestStreak then
 		pw.bestStreak = pw.streak
 	end
-	-- 統計
-	pw.totalCorrect = (pw.totalCorrect or 0)
-	local ls = winner:FindFirstChild("leaderstats")
-	local winsValue = ls and (ls:FindFirstChild("勝数") or ls:FindFirstChild("Wins"))
-	if winsValue then
-		winsValue.Value = pw.wins
+	-- 統計の初期化
+	if pw.totalCorrect == nil then pw.totalCorrect = 0 end
+	if pl.totalCorrect == nil then pl.totalCorrect = 0 end
+	-- leaderstats 更新 (日本語/英語の両名に対応)
+	local lsW = winner:FindFirstChild("leaderstats")
+	if lsW then
+		local winsValue = lsW:FindFirstChild("勝数") or lsW:FindFirstChild("Wins")
+		if winsValue then winsValue.Value = pw.wins end
+		local lvlW = lsW:FindFirstChild("レベル") or lsW:FindFirstChild("Level")
+		if lvlW then lvlW.Value = pw.level or 1 end
 	end
-	local lvlW = winner:FindFirstChild("leaderstats") and winner.leaderstats:FindFirstChild("Level") or winner.leaderstats and winner.leaderstats:FindFirstChild("レベル")
-	if lvlW then lvlW.Value = pw.level end
-	local lvlL = loser:FindFirstChild("leaderstats") and loser.leaderstats:FindFirstChild("Level") or loser.leaderstats and loser.leaderstats:FindFirstChild("レベル")
-	if lvlL then lvlL.Value = pl.level end
+	local lsL = loser:FindFirstChild("leaderstats")
+	if lsL then
+		local lvlL = lsL:FindFirstChild("レベル") or lsL:FindFirstChild("Level")
+		if lvlL then lvlL.Value = pl.level or 1 end
+		local winsL = lsL:FindFirstChild("勝数") or lsL:FindFirstChild("Wins")
+		if winsL then winsL.Value = pl.wins end
+	end
 	StatsService.markDirty(winner)
 	StatsService.markDirty(loser)
 	return dw

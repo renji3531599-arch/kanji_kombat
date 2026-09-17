@@ -117,10 +117,22 @@ function MatchService.tick()
 end
 
 -- ------------------------------------------------------------- match
+local function isSingleCharPrompt(s)
+	-- UTF-8の文字数を正しく数える (漢字1文字判定のバグ修正: #s はバイト長)
+	if utf8 and utf8.len then
+		local ok, l = pcall(function() return utf8.len(s) end)
+		if ok and l then return l == 1 end
+	end
+	-- フォールバック: UTF-8のコードポイント数を数える
+	local _, count = string.gsub(s, "[^\128-\191]", "")
+	return count == 1
+end
+
 local function teleport(player, cf)
 	local char = player.Character
-	if char and char.PrimaryPart then
-		char:PivotTo(cf)
+	if char then
+		-- PrimaryPartがなくてもPivotToでテレポート可能 (バグ修正)
+		pcall(function() char:PivotTo(cf) end)
 	end
 end
 
@@ -157,10 +169,15 @@ local function calcDamage(correct, timeTaken, first, ownHp, state, opponentCorre
 		dmg = dmg + B.COMEBACK_BONUS
 		flags.comeback = true
 	end
-	-- 残り時間ボーナス
+	-- 残り時間ボーナス (math.clamp がない環境へのフォールバック)
 	local remain = Config.QUESTION_TIME - elapsed
 	if remain > 0 then
-		dmg = dmg + math.clamp(math.floor(remain/2), 0, B.TIME_BONUS_MAX)
+		local add = math.floor(remain/2)
+		if math.clamp then
+			dmg = dmg + math.clamp(add, 0, B.TIME_BONUS_MAX)
+		else
+			dmg = dmg + math.max(0, math.min(add, B.TIME_BONUS_MAX))
+		end
 	end
 	-- コンボ
 	local combo = state.combo -- この問題を正解する前の combo (呼出側で +1 する前)
@@ -209,7 +226,6 @@ function MatchService.startMatch(levelKey, p1, p2)
 			[p1] = ensureBattleState(StatsService.get(p1), p1),
 			[p2] = ensureBattleState(StatsService.get(p2), p2),
 		},
-		levelKey = levelKey,
 		midActions = {}, -- [player] = {hint, ult}
 	}
 	matches[match] = true
@@ -345,13 +361,13 @@ function MatchService.playRound(match, round, sudden)
 
 	send(match.players[1], "question", {
 		round = round, total = Config.ROUND_COUNT, sudden = sudden,
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		prompt = q.p, isKanji = isSingleCharPrompt(q.p), choices = choices,
 		timeLimit = Config.QUESTION_TIME, hpMe = hp1, hpOp = hp2,
 		combo = st1.combo, ult = st1.ult, shield = st1.shield, opUlt = st2.ult,
 	})
 	send(match.players[2], "question", {
 		round = round, total = Config.ROUND_COUNT, sudden = sudden,
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		prompt = q.p, isKanji = isSingleCharPrompt(q.p), choices = choices,
 		timeLimit = Config.QUESTION_TIME, hpMe = hp2, hpOp = hp1,
 		combo = st2.combo, ult = st2.ult, shield = st2.shield, opUlt = st1.ult,
 	})
@@ -424,7 +440,11 @@ function MatchService.playRound(match, round, sudden)
 				gain = B.ULT_GAIN_PERFECT
 				pair.st.perfects = pair.st.perfects + 1
 			end
-			pair.st.ult = math.clamp(pair.st.ult + gain, 0, B.ULT_MAX)
+			if math.clamp then
+				pair.st.ult = math.clamp(pair.st.ult + gain, 0, B.ULT_MAX)
+			else
+				pair.st.ult = math.max(0, math.min(pair.st.ult + gain, B.ULT_MAX))
+			end
 			-- 統計
 			local prof = StatsService.get(pair.p)
 			if prof then
@@ -442,7 +462,11 @@ function MatchService.playRound(match, round, sudden)
 			-- 誤答: コンボリセット、ペナルティ
 			pair.st.combo = 0
 			pair.st.missStreak = pair.st.missStreak + 1
-			pair.st.ult = math.clamp(pair.st.ult + B.ULT_GAIN_WRONG, 0, B.ULT_MAX)
+			if math.clamp then
+				pair.st.ult = math.clamp(pair.st.ult + B.ULT_GAIN_WRONG, 0, B.ULT_MAX)
+			else
+				pair.st.ult = math.max(0, math.min(pair.st.ult + B.ULT_GAIN_WRONG, B.ULT_MAX))
+			end
 			if pair.st.missStreak >= B.MISS_STREAK_PENALTY then
 				-- 相手に回復させてしまう
 				local other = (pair.p == match.players[1]) and match.players[2] or match.players[1]
@@ -456,12 +480,13 @@ function MatchService.playRound(match, round, sudden)
 	match.hp[match.players[1]] = math.max(0, hp1 - dmg2)
 	match.hp[match.players[2]] = math.max(0, hp2 - dmg1)
 
-	-- セカンドチャンス (Robuxアイテム) で蘇生
+	-- セカンドチャンス (Robuxアイテム) で蘇生 (dirtyマーク修正)
 	for _, p in ipairs(match.players) do
 		if match.hp[p] <= 0 then
 			local prof = StatsService.get(p)
 			if prof and prof.inventory and (prof.inventory.secondChance or 0) > 0 then
 				prof.inventory.secondChance = prof.inventory.secondChance - 1
+				if StatsService and StatsService.markDirty then StatsService.markDirty(p) end
 				match.hp[p] = 30
 				send(p, "secondChanceActivated", { hp = 30 })
 				send((p==match.players[1] and match.players[2] or match.players[1]), "opponentSecondChance", {})
@@ -536,7 +561,7 @@ function MatchService.practiceNext(player)
 	st.choices = choices
 	st.prompt = q.p
 	send(player, "practiceQ", {
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		prompt = q.p, isKanji = isSingleCharPrompt(q.p), choices = choices,
 		timeLimit = 20, streak = st.streak,
 		levelKey = st.levelKey,
 	})
@@ -580,11 +605,13 @@ end
 function MatchService.practiceReroll(player)
 	local st = practice[player]
 	if not st or not st.active then return end
-	-- コイン消費
+	-- コイン消費 (dirtyマーク修正)
 	if CurrencyService then
 		local prof = StatsService.get(player)
 		if (prof.inventory.reroll or 0) > 0 then
 			prof.inventory.reroll = prof.inventory.reroll - 1
+			if StatsService and StatsService.markDirty then StatsService.markDirty(player) end
+			if CurrencyService then CurrencyService.sendUpdate(player) end
 		else
 			if not CurrencyService.spend(player, Config.ECONOMY.COST_REROLL_QUESTION, 0, "reroll") then
 				send(player, "toast", { key = "toastNotEnoughCoins" })
@@ -621,11 +648,14 @@ function MatchService.onRemote(player, data)
 			if m.players[1]==player or m.players[2]==player then
 				local st = m.state[player]
 				if st and not st.hintUsed and m.choices then
-					-- コイン or 所持品消費
+					-- コイン or 所持品消費 (dirtyマーク修正)
 					local prof = StatsService.get(player)
 					local consumed = false
 					if (prof.inventory.hint or 0) > 0 then
-						prof.inventory.hint = prof.inventory.hint - 1; consumed=true
+						prof.inventory.hint = prof.inventory.hint - 1
+						if StatsService and StatsService.markDirty then StatsService.markDirty(player) end
+						if CurrencyService then CurrencyService.sendUpdate(player) end
+						consumed=true
 					elseif CurrencyService and CurrencyService.spend(player, Config.ECONOMY.COST_HINT, 0, "hint") then
 						consumed=true
 					end
@@ -636,7 +666,6 @@ function MatchService.onRemote(player, data)
 						for i=1,4 do if i~=m.correct then table.insert(wrong,i) end end
 						local elim = wrong[math.random(#wrong)]
 						send(player, "hintResult", { eliminate = elim })
-						-- 少しだけXP付与?
 					else
 						send(player, "toast", { key="toastNotEnoughCoins" })
 					end
@@ -665,6 +694,7 @@ function MatchService.onRemote(player, data)
 				local prof = StatsService.get(player)
 				if st and not st.shield and (prof.inventory.shield or 0)>0 then
 					prof.inventory.shield = prof.inventory.shield - 1
+					if StatsService and StatsService.markDirty then StatsService.markDirty(player) end
 					st.shield = true
 					send(player, "shieldActivated", {})
 					if CurrencyService then CurrencyService.sendUpdate(player) end

@@ -198,16 +198,18 @@ def source_keys():
     used = set()
     for path in glob.glob(os.path.join(ROOT, 'src', '**', '*.luau'), recursive=True):
         src = open(path, encoding='utf-8').read()
-        # "leave" / "KO" のような比較用リテラルは除外する
-        compared = set(re.findall(r'[=~]= "([A-Za-z][A-Za-z0-9_]*)"', src))
         for args in re.findall(r'I18n\.t\(([^\n]*)', src):
-            for key in re.findall(r'"([A-Za-z][A-Za-z0-9_]*)"', args):
-                if key not in compared:
-                    used.add(key)
-        # サーバー → クライアントのメッセージキー
-        for key in re.findall(r'send\([^\n]*key = "([A-Za-z][A-Za-z0-9_]*)"', src):
+            # == "manual" のような比較リテラルを除外してからキー抽出 (旧バグ: [^\\n] は \\ と n を除外)
+            cleaned = re.sub(r'[=~]=\s*"[A-Za-z][A-Za-z0-9_]*"', '', args)
+            for key in re.findall(r'"([A-Za-z][A-Za-z0-9_]*)"', cleaned):
+                used.add(key)
+        for key in re.findall(r'send\([^\n]*key\s*=\s*"([A-Za-z][A-Za-z0-9_]*)"', src):
             used.add(key)
     return used
+
+
+
+
 
 
 def module_tests(lua, mods):
