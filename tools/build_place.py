@@ -57,7 +57,7 @@ def build():
     # ----- ServerScriptService
     modules = folder('Modules', ''.join(
         script_item('ModuleScript', n, 'src/server/Modules/%s.luau' % n)
-        for n in ['QuestionBank', 'StatsService', 'ArenaService', 'LobbyService', 'MatchService']
+        for n in ['QuestionBank', 'StatsService', 'ArenaService', 'LobbyService', 'MatchService', 'PurchaseService']
     ))
     data_dir = os.path.join(SRC, 'server', 'data')
     data_files = sorted(f for f in os.listdir(data_dir) if f.endswith('.luau'))

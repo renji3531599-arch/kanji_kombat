@@ -8,6 +8,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local LocalizationService = game:GetService("LocalizationService")
 
 local UiKit = require(script.Parent:WaitForChild("ClientModules"):WaitForChild("UiKit"))
@@ -64,7 +65,7 @@ local T = {} -- [name] = TextLabel (retranslate で一括更新)
 
 -- 先に宣言しておく (UI構築中のコールバックからも参照する)
 local renderLevelCards, renderStatus, renderProfile, renderHp
-local renderQuestion, renderPractice, renderResult, retranslate
+local renderQuestion, renderPractice, renderResult, renderShop, renderBattleState, retranslate
 
 -- ================================================================ lobby
 local lobby = UiKit.mk("Frame", {
@@ -110,10 +111,19 @@ T.profileChip = UiKit.label({
 	Font = Enum.Font.Gotham, TextColor3 = COL_TEXT, TextXAlignment = Enum.TextXAlignment.Right,
 	TextSize = 15, TextScaled = false,
 }, lobby)
+T.profileProgress = UiKit.label({
+	Size = UDim2.new(1, -40, 0, 18), Position = UDim2.new(0, 20, 0, 128),
+	Font = Enum.Font.Gotham, TextColor3 = COL_GOLD, TextXAlignment = Enum.TextXAlignment.Right,
+	TextSize = 14, TextScaled = false,
+}, lobby)
 
 local langButton = UiKit.button({
-	Size = UDim2.fromOffset(160, 32), Position = UDim2.new(1, -180, 0, 12),
+	Size = UDim2.fromOffset(140, 32), Position = UDim2.new(1, -160, 0, 12),
 	BackgroundColor3 = Color3.fromRGB(60, 70, 105), TextSize = 15, TextScaled = false,
+}, lobby)
+local shopButton = UiKit.button({
+	Size = UDim2.fromOffset(130, 32), Position = UDim2.new(1, -302, 0, 12),
+	BackgroundColor3 = Color3.fromRGB(105, 65, 135), TextSize = 15, TextScaled = false,
 }, lobby)
 
 T.status = UiKit.label({
@@ -126,7 +136,7 @@ local queueCounts = {}
 local selectedKey = nil
 
 local grid = UiKit.mk("Frame", {
-	Size = UDim2.new(1, -40, 1, -250), Position = UDim2.fromOffset(20, 140),
+	Size = UDim2.new(1, -40, 1, -260), Position = UDim2.fromOffset(20, 150),
 	BackgroundTransparency = 1,
 }, lobby)
 UiKit.mk("UIGridLayout", {
@@ -237,6 +247,37 @@ local roundLbl = UiKit.label({
 	Size = UDim2.fromOffset(300, 30), Position = UDim2.new(0.5, -150, 0, 82),
 	Font = Enum.Font.GothamBold, TextColor3 = COL_DIM, Text = "",
 }, battle)
+local comboLbl = UiKit.label({
+	Size = UDim2.fromOffset(190, 28), Position = UDim2.new(0.5, -340, 0, 94),
+	Font = Enum.Font.GothamBlack, TextColor3 = COL_GOLD, TextXAlignment = Enum.TextXAlignment.Left,
+	TextSize = 17, TextScaled = false, Text = "",
+}, battle)
+local energyLbl = UiKit.label({
+	Size = UDim2.fromOffset(210, 24), Position = UDim2.new(0.5, 130, 0, 96),
+	Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(130, 220, 255), TextXAlignment = Enum.TextXAlignment.Right,
+	TextSize = 14, TextScaled = false, Text = "",
+}, battle)
+local energyHolder = UiKit.mk("Frame", {
+	Size = UDim2.fromOffset(210, 7), Position = UDim2.new(0.5, 130, 0, 119),
+	BackgroundColor3 = Color3.fromRGB(25, 30, 42), BorderSizePixel = 0,
+}, battle)
+UiKit.corner(energyHolder, 4)
+local energyFill = UiKit.mk("Frame", {
+	Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(80, 190, 255), BorderSizePixel = 0,
+}, energyHolder)
+UiKit.corner(energyFill, 4)
+local shieldLbl = UiKit.label({
+	Size = UDim2.fromOffset(180, 22), Position = UDim2.new(0.5, -90, 1, -112),
+	Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(130, 220, 255), TextSize = 14, TextScaled = false,
+}, battle)
+local skillGuard = UiKit.button({
+	Size = UDim2.fromOffset(190, 34), Position = UDim2.new(0.5, -205, 1, -154),
+	BackgroundColor3 = Color3.fromRGB(45, 100, 140), TextSize = 13, TextScaled = false,
+}, battle)
+local skillFocus = UiKit.button({
+	Size = UDim2.fromOffset(190, 34), Position = UDim2.new(0.5, 15, 1, -154),
+	BackgroundColor3 = Color3.fromRGB(105, 70, 150), TextSize = 13, TextScaled = false,
+}, battle)
 
 local promptCard = UiKit.mk("Frame", {
 	Size = UDim2.fromOffset(680, 190), Position = UDim2.new(0.5, -340, 0, 126),
@@ -292,7 +333,7 @@ for i = 1, 4 do
 end
 
 local suddenLbl = UiKit.label({
-	Size = UDim2.fromOffset(400, 34), Position = UDim2.new(0.5, -200, 1, -122),
+	Size = UDim2.fromOffset(400, 30), Position = UDim2.new(0.5, -200, 1, -194),
 	Font = Enum.Font.GothamBold, TextColor3 = COL_BAD, Visible = false,
 }, battle)
 
@@ -362,13 +403,91 @@ local resultOk = UiKit.button({
 	BackgroundColor3 = Color3.fromRGB(170, 45, 60), ZIndex = 6,
 }, result)
 
+local toast -- shop callbacks are wired before the toast implementation below
+
+-- ================================================================ shop / Robux cosmetics
+local shop = UiKit.mk("Frame", {
+	Name = "Shop", Visible = false, Size = UDim2.fromOffset(700, 560),
+	Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
+	BackgroundColor3 = Color3.fromRGB(28, 24, 40), BorderSizePixel = 0, ZIndex = 12,
+}, screen)
+UiKit.corner(shop, 18)
+UiKit.stroke(shop, Color3.fromRGB(180, 100, 230), 2, 0.12)
+local shopTitle = UiKit.label({
+	Size = UDim2.new(1, -150, 0, 42), Position = UDim2.fromOffset(24, 18),
+	Font = Enum.Font.GothamBlack, TextColor3 = COL_GOLD, ZIndex = 13,
+}, shop)
+local shopBalance = UiKit.label({
+	Size = UDim2.new(1, -48, 0, 24), Position = UDim2.fromOffset(24, 62),
+	Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT, TextXAlignment = Enum.TextXAlignment.Left,
+	TextSize = 16, TextScaled = false, ZIndex = 13,
+}, shop)
+local shopSubtitle = UiKit.label({
+	Size = UDim2.new(1, -48, 0, 22), Position = UDim2.fromOffset(24, 88),
+	Font = Enum.Font.Gotham, TextColor3 = COL_DIM, TextXAlignment = Enum.TextXAlignment.Left,
+	TextSize = 14, TextScaled = false, ZIndex = 13,
+}, shop)
+local shopClose = UiKit.button({
+	Size = UDim2.fromOffset(110, 34), Position = UDim2.new(1, -134, 0, 20),
+	BackgroundColor3 = Color3.fromRGB(70, 65, 90), TextSize = 14, TextScaled = false, ZIndex = 13,
+}, shop)
+local shopGrid = UiKit.mk("Frame", {
+	Size = UDim2.new(1, -48, 1, -145), Position = UDim2.fromOffset(24, 125),
+	BackgroundTransparency = 1, ZIndex = 13,
+}, shop)
+UiKit.mk("UIGridLayout", {
+	CellSize = UDim2.fromOffset(315, 118), CellPadding = UDim2.fromOffset(14, 12),
+	SortOrder = Enum.SortOrder.LayoutOrder, Parent = shopGrid,
+})
+local shopCards = {}
+for i, item in ipairs(Config.SHOP_ITEMS or {}) do
+	local card = UiKit.mk("Frame", {
+		Name = "Shop_" .. item.key, LayoutOrder = i,
+		BackgroundColor3 = Color3.fromRGB(46, 38, 62), BorderSizePixel = 0, ZIndex = 13,
+	}, shopGrid)
+	UiKit.corner(card, 12)
+	local icon = UiKit.label({
+		Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(10, 12),
+		Font = Enum.Font.GothamBlack, TextColor3 = COL_GOLD, TextSize = 25, TextScaled = false, ZIndex = 14,
+	}, card)
+	local name = UiKit.label({
+		Size = UDim2.new(1, -60, 0, 26), Position = UDim2.fromOffset(54, 10),
+		Font = Enum.Font.GothamBold, TextColor3 = COL_TEXT, TextXAlignment = Enum.TextXAlignment.Left,
+		TextSize = 16, TextScaled = false, ZIndex = 14,
+	}, card)
+	local desc = UiKit.label({
+		Size = UDim2.new(1, -64, 0, 34), Position = UDim2.fromOffset(54, 36),
+		Font = Enum.Font.Gotham, TextColor3 = COL_DIM, TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, TextSize = 12, TextScaled = false, ZIndex = 14,
+	}, card)
+	local buy = UiKit.button({
+		Size = UDim2.fromOffset(112, 28), Position = UDim2.new(1, -122, 1, -36),
+		BackgroundColor3 = Color3.fromRGB(110, 70, 160), TextSize = 12, TextScaled = false, ZIndex = 14,
+	}, card)
+	buy.MouseButton1Click:Connect(function()
+		if not item.id or item.id <= 0 then
+			toast(I18n.t("shopUnavailable"))
+			return
+		end
+		toast(I18n.t("purchasePending"))
+		pcall(function()
+			if item.kind == "gamepass" then
+				MarketplaceService:PromptGamePassPurchase(player, item.id)
+			else
+				MarketplaceService:PromptProductPurchase(player, item.id)
+			end
+		end)
+	end)
+	shopCards[item.key] = { card = card, icon = icon, name = name, desc = desc, buy = buy, item = item }
+end
+
 local toastLbl = UiKit.label({
 	Size = UDim2.fromOffset(600, 34), Position = UDim2.new(0.5, -300, 0, 110),
 	Font = Enum.Font.GothamBold, TextColor3 = COL_GOLD,
 	BackgroundTransparency = 1, Text = "", ZIndex = 10,
 }, screen)
 local toastToken = 0
-local function toast(msg)
+toast = function(msg)
 	toastToken = toastToken + 1
 	local my = toastToken
 	toastLbl.Text = msg
@@ -449,6 +568,9 @@ local curResultData = nil
 local pracLevelKey = nil
 local pracStreakValue = 0
 local hpMe, hpOp = Config.MAX_HP, Config.MAX_HP
+local battleState = { combo = 0, bestCombo = 0, energy = 0, shield = 0, focus = 0 }
+local opponentState = { combo = 0, bestCombo = 0, energy = 0, shield = 0, focus = 0 }
+local shopCatalog = Config.SHOP_ITEMS or {}
 
 -- ================================================================ text helpers
 local function setChoiceText(choice, primary, secondary)
@@ -505,7 +627,7 @@ function renderLevelCards()
 			card.info.Text = I18n.t("levelQueue", { n = n })
 			card.info.TextColor3 = COL_GOOD
 		else
-			card.info.Text = I18n.t("levelInfo", { kanji = lv and lv.kanji or 0 })
+				card.info.Text = I18n.t("levelInfo", { kanji = lv and lv.kanji or 0 })
 			card.info.TextColor3 = COL_GOLD
 		end
 		local r = (profile and profile.ratings and profile.ratings[key]) or Config.DEFAULT_RATING
@@ -527,6 +649,7 @@ end
 function renderProfile()
 	if not profile then
 		T.profileChip.Text = I18n.t("profileLoading")
+		T.profileProgress.Text = ""
 		return
 	end
 	T.profileChip.Text = I18n.t("profileStats", {
@@ -534,6 +657,47 @@ function renderProfile()
 		losses = profile.losses or 0,
 		streak = profile.streak or 0,
 	})
+	local levelKey = selectedKey or "K10"
+	local rating = profile.ratings and profile.ratings[levelKey] or Config.DEFAULT_RATING
+	local daily = profile.daily or {}
+	T.profileProgress.Text = I18n.t("coinsLabel", { coins = profile.coins or 0 })
+		.. "　" .. I18n.t("xpLabel", { xp = profile.xp or 0, level = profile.level or 1 })
+		.. "　" .. I18n.t("rankLabel", { rank = I18n.rankTitle(rating), rating = rating })
+		.. "　" .. I18n.t("dailyProgress", {
+			done = daily.battles or 0,
+			goal = Config.PROGRESSION.DAILY_GOAL,
+			reward = 100,
+		})
+	if (profile.streak or 0) > 1 then
+		T.profileProgress.Text = T.profileProgress.Text .. "　" .. I18n.t("streakBonus", { streak = profile.streak })
+	end
+end
+
+function renderShop()
+	shopTitle.Text = I18n.t("shopTitle")
+	shopSubtitle.Text = I18n.t("shopSubtitle")
+	shopClose.Text = I18n.t("shopClose")
+	shopBalance.Text = I18n.t("shopBalance", { coins = profile and profile.coins or 0 })
+	for key, card in pairs(shopCards) do
+		local item = card.item
+		local state = nil
+		if type(shopCatalog) == "table" then
+			for _, candidate in ipairs(shopCatalog) do
+				if candidate.key == key then
+					state = candidate
+					break
+				end
+			end
+		end
+		card.icon.Text = item.icon or "✦"
+		card.name.Text = I18n.t(item.nameKey or key)
+		card.desc.Text = I18n.t(item.descKey or key)
+		local isOwned = state and state.owned == true
+		card.buy.Text = isOwned and I18n.t("shopOwned") or I18n.t("shopBuy", { robux = item.robux or 0 })
+		card.buy.BackgroundColor3 = isOwned and Color3.fromRGB(65, 105, 80) or Color3.fromRGB(110, 70, 160)
+		card.buy.AutoButtonColor = not isOwned
+		card.buy.Active = not isOwned
+	end
 end
 
 function renderHp()
@@ -541,6 +705,22 @@ function renderHp()
 	myHp.name.Text = I18n.t("myHpLabel")
 	opHp.value.Text = hpOp .. " / " .. Config.MAX_HP
 	myHp.value.Text = hpMe .. " / " .. Config.MAX_HP
+end
+
+function renderBattleState()
+	comboLbl.Text = I18n.t("comboLabel", { combo = battleState.combo or 0 })
+	energyLbl.Text = I18n.t("energyLabel", { energy = battleState.energy or 0 })
+	shieldLbl.Text = I18n.t("shieldLabel", { shield = battleState.shield or 0 })
+	local energy = math.max(0, math.min(1, (battleState.energy or 0) / Config.ENERGY_MAX))
+	energyFill.Size = UDim2.fromScale(energy, 1)
+	local guardReady = (battleState.energy or 0) >= Config.ENERGY_GUARD_COST
+	local focusReady = (battleState.energy or 0) >= Config.ENERGY_FOCUS_COST
+	skillGuard.Text = I18n.t("skillGuard", { cost = Config.ENERGY_GUARD_COST })
+	skillFocus.Text = I18n.t("skillFocus", { cost = Config.ENERGY_FOCUS_COST })
+	skillGuard.Active = guardReady and answerLocked == false
+	skillFocus.Active = focusReady and answerLocked == false
+	skillGuard.BackgroundColor3 = guardReady and Color3.fromRGB(45, 100, 140) or Color3.fromRGB(55, 60, 72)
+	skillFocus.BackgroundColor3 = focusReady and Color3.fromRGB(105, 70, 150) or Color3.fromRGB(55, 60, 72)
 end
 
 function renderQuestion()
@@ -564,7 +744,20 @@ function renderQuestion()
 		local kana = curQ.choices[curAnswer.correctIdx] or "?"
 		if curAnswer.correct then
 			promptHint.TextColor3 = COL_GOOD
-			promptHint.Text = I18n.t("answerCorrect", { dealt = curAnswer.dealt or 0 })
+			local parts = curAnswer.damageParts or {}
+			local message = I18n.t("answerCorrect", { dealt = curAnswer.dealt or 0 })
+			if parts.fast then message = message .. " " .. I18n.t("answerFast") end
+			if parts.first then message = message .. " " .. I18n.t("answerFirst") end
+			if parts.combo and parts.combo >= 3 then message = message .. " " .. I18n.t("answerPerfect") end
+			if parts.focus then message = message .. " ✦" end
+			if (curAnswer.blocked or 0) > 0 then
+				message = message .. "  " .. I18n.t("shieldLabel", { shield = curAnswer.blocked })
+			end
+			promptHint.Text = I18n.t("answerBreakdown", {
+				message = message,
+				combo = parts.combo or 0,
+				energy = parts.energy or 0,
+			})
 		else
 			promptHint.TextColor3 = COL_BAD
 			promptHint.Text = I18n.t("answerWrong", { answer = readingText(kana) })
@@ -633,14 +826,26 @@ function renderResult()
 		wins = d.wins or 0,
 		losses = d.losses or 0,
 	})
+	if d.summary then
+		local reward = d.reward or {}
+		resultDetail.Text = resultDetail.Text .. "\n" .. I18n.t("resultBattleSummary", {
+			correct = d.summary.correct or 0,
+			total = d.summary.total or 0,
+			accuracy = d.summary.accuracy or 0,
+			combo = d.summary.bestCombo or 0,
+			coins = reward.coins or 0,
+			xp = reward.xp or 0,
+		})
+	end
 end
 
 -- 言語が変わったときに呼ぶ (静的テキスト + 動的表示をまとめて再構築)
 function retranslate()
 	T.title.Text = I18n.t("title")
 	T.subtitle.Text = I18n.t("subtitle")
-	T.levelsNote.Text = I18n.t("levelsNote")
+	T.levelsNote.Text = I18n.t("levelsNote") .. "  ·  " .. I18n.t("matchmakingTip")
 	langButton.Text = I18n.t("languageButton")
+	shopButton.Text = I18n.t("shopButton")
 	battleButton.Text = I18n.t("battleButton")
 	practiceButton.Text = I18n.t("practiceButton")
 	cancelButton.Text = I18n.t("cancelButton")
@@ -657,7 +862,9 @@ function retranslate()
 	renderLevelCards()
 	renderStatus()
 	renderProfile()
+	renderShop()
 	renderHp()
+	renderBattleState()
 	renderQuestion()
 	renderPractice()
 	renderResult()
@@ -671,6 +878,7 @@ local function refreshProfile()
 		if ok and type(p) == "table" then
 			profile = p
 			renderProfile()
+			renderShop()
 			renderLevelCards()
 			-- 保存された手動設定があれば自動判定より優先する
 			if localeSource == "auto" and type(p.locale) == "string" and p.locale ~= "" then
@@ -692,6 +900,7 @@ local function setQueueing(v)
 	queueing = v
 	battleButton.Visible = not v
 	practiceButton.Visible = not v
+	shopButton.Visible = not v
 	cancelButton.Visible = v
 	if v then
 		T.status.Text = I18n.t("searching")
@@ -704,6 +913,7 @@ local function showLobby()
 	battle.Visible = false
 	prac.Visible = false
 	result.Visible = false
+	shop.Visible = false
 	lobby.Visible = true
 	refreshProfile()
 end
@@ -717,6 +927,18 @@ langButton.MouseButton1Click:Connect(function()
 	retranslate()
 	toast(I18n.t("languageChanged"))
 	pushLocaleToServer()
+end)
+
+shopButton.MouseButton1Click:Connect(function()
+	shop.Visible = true
+	lobby.Visible = false
+	renderShop()
+	C2S:FireServer({ action = "shopRefresh" })
+end)
+shopClose.MouseButton1Click:Connect(function()
+	shop.Visible = false
+	lobby.Visible = true
+	refreshProfile()
 end)
 
 -- 端末の言語設定が変わったら (自動判定モードのときだけ) 追従する
@@ -785,14 +1007,28 @@ resultOk.MouseButton1Click:Connect(function()
 	showLobby()
 end)
 
+skillGuard.MouseButton1Click:Connect(function()
+	if battle.Visible and not answerLocked then
+		C2S:FireServer({ action = "useSkill", skill = "guard" })
+	end
+end)
+skillFocus.MouseButton1Click:Connect(function()
+	if battle.Visible and not answerLocked then
+		C2S:FireServer({ action = "useSkill", skill = "focus" })
+	end
+end)
+
 for i, choice in ipairs(choiceButtons) do
 	choice.button.MouseButton1Click:Connect(function()
 		if answerLocked then
 			return
 		end
 		answerLocked = true
-		C2S:FireServer({ action = "submit", round = curRound, idx = i })
+		C2S:FireServer({ action = "submit", round = curRound, questionId = curQ and curQ.questionId, idx = i })
 		choice.button.BackgroundColor3 = Color3.fromRGB(90, 80, 130)
+		promptHint.TextColor3 = COL_DIM
+		promptHint.Text = I18n.t("battleWaiting")
+		renderBattleState()
 	end)
 end
 for i, choice in ipairs(pracChoices) do
@@ -846,6 +1082,36 @@ S2C.OnClientEvent:Connect(function(data)
 			toast(data.msg or "")
 		end
 
+	elseif a == "shopState" then
+		shopCatalog = data.catalog or shopCatalog
+		if profile then
+			profile.coins = data.coins or profile.coins
+			profile.inventory = data.inventory or profile.inventory
+			profile.equipped = data.equipped or profile.equipped
+		end
+		renderProfile()
+		renderShop()
+
+	elseif a == "purchaseGranted" then
+		local itemName = data.nameKey and I18n.t(data.nameKey) or tostring(data.itemKey or "")
+		toast(I18n.t("purchaseSuccess", { item = itemName }))
+		if profile then
+			profile.coins = data.coins or profile.coins
+			profile.xp = data.xp or profile.xp
+			profile.level = data.level or profile.level
+		end
+		renderProfile()
+		renderShop()
+
+	elseif a == "skillResult" then
+		if data.state then
+			battleState = data.state
+			renderBattleState()
+		end
+		if data.key then
+			toast(I18n.t(data.key, localizeArgs(data.args)))
+		end
+
 	elseif a == "matchIntro" then
 		lobby.Visible = false
 		prac.Visible = false
@@ -856,6 +1122,8 @@ S2C.OnClientEvent:Connect(function(data)
 		answerLocked = false
 		curQ = nil
 		curAnswer = nil
+		battleState = { combo = 0, bestCombo = 0, energy = 0, shield = 0, focus = 0 }
+		opponentState = { combo = 0, bestCombo = 0, energy = 0, shield = 0, focus = 0 }
 		opName.Text = "VS " .. (data.opponent or "?")
 		roundLbl.Text = I18n.t("preparing")
 		promptText.Text = I18n.t("title")
@@ -868,6 +1136,7 @@ S2C.OnClientEvent:Connect(function(data)
 		end
 		hpMe, hpOp = Config.MAX_HP, Config.MAX_HP
 		renderHp()
+		renderBattleState()
 		setHp(myHp.fill, hpMe, Config.MAX_HP)
 		setHp(opHp.fill, hpOp, Config.MAX_HP)
 		task.wait(0.1)
@@ -884,13 +1153,17 @@ S2C.OnClientEvent:Connect(function(data)
 			prompt = data.prompt,
 			isKanji = data.isKanji,
 			choices = data.choices,
+			questionId = data.questionId,
 			round = data.round,
 			total = data.total,
 			sudden = data.sudden,
 		}
+		battleState = data.state or battleState
+		opponentState = data.opState or opponentState
 		suddenLbl.Visible = data.sudden == true
 		hpMe, hpOp = data.hpMe, data.hpOp
 		renderHp()
+		renderBattleState()
 		setHp(myHp.fill, hpMe, Config.MAX_HP)
 		setHp(opHp.fill, hpOp, Config.MAX_HP)
 		resetChoiceColors(choiceButtons)
@@ -899,13 +1172,18 @@ S2C.OnClientEvent:Connect(function(data)
 		UiKit.playSound("rbxasset://sounds/electronicpingshort.wav", 1.6, 0.3)
 
 	elseif a == "answerResult" then
-		curAnswer = {
-			correct = data.correct,
-			correctIdx = data.correctIdx,
-			myIdx = data.myIdx,
-			dealt = data.dealt,
-			taken = data.taken,
-		}
+			answerLocked = true
+			curAnswer = {
+				correct = data.correct,
+				correctIdx = data.correctIdx,
+				myIdx = data.myIdx,
+				dealt = data.dealt,
+				taken = data.taken,
+				blocked = data.blocked,
+				damageParts = data.damageParts,
+			}
+			battleState = data.state or battleState
+			opponentState = data.opState or opponentState
 		for i, choice in ipairs(choiceButtons) do
 			choice.button.AutoButtonColor = false
 			if i == data.correctIdx then
@@ -921,9 +1199,10 @@ S2C.OnClientEvent:Connect(function(data)
 		else
 			UiKit.playSound("rbxasset://sounds/snap.mp3", 1, 0.7)
 		end
-		hpMe, hpOp = data.hpMe, data.hpOp
-		renderHp()
-		setHp(myHp.fill, hpMe, Config.MAX_HP)
+			hpMe, hpOp = data.hpMe, data.hpOp
+			renderHp()
+			renderBattleState()
+			setHp(myHp.fill, hpMe, Config.MAX_HP)
 		setHp(opHp.fill, hpOp, Config.MAX_HP)
 		renderQuestion()
 
