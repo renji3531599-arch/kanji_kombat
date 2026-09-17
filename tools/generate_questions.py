@@ -20,7 +20,7 @@ import sys
 import unicodedata
 from collections import defaultdict
 
-DB = '/usr/local/lib/python3.11/dist-packages/jamdict_data/jamdict.db'
+DB = os.environ.get('JAMDICT_DB', '/usr/local/lib/python3.11/dist-packages/jamdict_data/jamdict.db')
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 OFFICIAL = os.path.join(ROOT, 'data', 'official')
 OUT_SERVER = os.path.join(ROOT, 'src', 'server', 'data')
@@ -45,6 +45,18 @@ LEVELS = [
     ('K01', '1級', []),          # + JIS第2水準 (≈6000字)
 ]
 N_LEVELS = len(LEVELS)
+
+# 漢字の常識的な音訓取り違えを固定する代表例。生成結果が辞書更新で
+# 揺れても、一日・青年・定款のような「見た瞬間に意味が分かる」問題は守る。
+PINNED_QUESTIONS = {
+    'K10': [
+        {'p': '一日', 'a': 'いちにち', 'd': ['ひとにち', 'いつにち', 'いちじつ'], 't': 'w'},
+        {'p': '青年', 'a': 'せいねん', 'd': ['あおとし', 'あおねん', 'せいとし'], 't': 'w'},
+    ],
+    'KP2': [
+        {'p': '定款', 'a': 'ていかん', 'd': ['ていせん', 'じょうかん', 'さだかん'], 't': 'w'},
+    ],
+}
 
 KANJI_RE = re.compile(r'^[\u4E00-\u9FFF\u3005]{1,4}[\u3041-\u309F]{0,3}$')
 KANA_RE = re.compile(r'^[\u3041-\u309Fー]+$')
@@ -281,30 +293,42 @@ def confusing_variants(reading):
     """かな1モーラだけを取り違える候補。全てかなのままなので表示上も読み。"""
     out = []
     chars = list(reading)
+    small_to_large = {'ぁ': 'あ', 'ぃ': 'い', 'ぅ': 'う', 'ぇ': 'え', 'ぉ': 'お',
+                      'ゃ': 'や', 'ゅ': 'ゆ', 'ょ': 'よ', 'ゎ': 'わ'}
+
+    # 促音の脱落 / 「つ」と読む誤りは最優先。きっさ→きさ・きつさ。
     for i, ch in enumerate(chars):
+        if ch == 'っ':
+            for replacement in ('', 'つ'):
+                candidate = reading[:i] + replacement + reading[i + 1:]
+                if candidate not in out:
+                    out.append(candidate)
+
+    # 先に濁点・母音の取り違えを並べる。促音の二重化は最後にする。
+    for i, ch in enumerate(chars):
+        if ch == 'っ':
+            continue
         for alt in CONFUSION.get(ch, ()):
             if alt != ch:
                 candidate = ''.join(chars[:i] + [alt] + chars[i + 1:])
                 if candidate not in out:
                     out.append(candidate)
-        # 小書きの有無・促音の見落としも定番のひっかけ。
-        small_to_large = {'ぁ': 'あ', 'ぃ': 'い', 'ぅ': 'う', 'ぇ': 'え', 'ぉ': 'お',
-                          'ゃ': 'や', 'ゅ': 'ゆ', 'ょ': 'よ', 'ゎ': 'わ'}
         if ch in small_to_large:
             candidate = ''.join(chars[:i] + [small_to_large[ch]] + chars[i + 1:])
             if candidate not in out:
                 out.append(candidate)
+
     for old, new in (('おう', 'おお'), ('おお', 'おう'), ('えい', 'ええ'), ('ええ', 'えい')):
         if old in reading:
             candidate = reading.replace(old, new, 1)
             if candidate not in out:
                 out.append(candidate)
+
+    # それでも足りない場合だけ、促音の位置を間違える候補を追加する。
     for i, ch in enumerate(chars):
-        if ch == 'っ':
-            candidate = reading[:i] + reading[i + 1:]
-            if candidate not in out:
-                out.append(candidate)
-        elif i + 1 < len(chars) and ch not in 'ゃゅょぁぃぅぇぉっ':
+        if ch == 'っ' or i > 0 and chars[i - 1] == 'っ':
+            continue
+        if i + 1 < len(chars) and ch not in 'ゃゅょぁぃぅぇぉっ':
             candidate = reading[:i + 1] + 'っ' + reading[i + 1:]
             if candidate not in out:
                 out.append(candidate)
@@ -328,6 +352,96 @@ def confusing_distance(a, b):
                                previous[j - 1] + substitution))
         previous = current
     return previous[-1]
+
+
+def word_reading_segments(word, reading, kj):
+    """漢字ごとの on/kun 読みで、実際の正解を分割できる候補を返す。"""
+    chars = HAN_RE.findall(word)
+    if len(chars) < 2 or len(chars) != len(word):
+        return []
+    options = []
+    for ch in chars:
+        info = kj.get(ch)
+        if not info:
+            return []
+        reads = list(dict.fromkeys(info['on'] + info['kun']))
+        options.append([r for r in reads if r])
+    out = []
+
+    def visit(index, offset, segments):
+        if index == len(options):
+            if offset == len(reading):
+                out.append(list(segments))
+            return
+        for candidate in options[index]:
+            if reading.startswith(candidate, offset):
+                segments.append(candidate)
+                visit(index + 1, offset + len(candidate), segments)
+                segments.pop()
+
+    visit(0, 0, [])
+    return out
+
+
+def semantic_distractors(word, reading, kj, forbid, rng, limit=6):
+    """漢字ごとの音訓の取り違えを作る (一日→ひとにち、青年→あおとし)。"""
+    scored = []
+    chars = HAN_RE.findall(word)
+    segments_list = word_reading_segments(word, reading, kj)
+    if len(chars) == 1:
+        info = kj.get(chars[0]) or {}
+        kun = info.get('kun', [])
+        for alternative in list(dict.fromkeys(kun + info.get('on', []))):
+            if alternative == reading or len(alternative) > len(reading) + 1:
+                continue
+            if len(alternative) == 1 and len(reading) >= 2:
+                continue
+            if alternative in forbid or not KANA_RE.match(alternative):
+                continue
+            kind_priority = 0 if alternative in kun else 1
+            scored.append(((abs(len(alternative) - len(reading)), kind_priority, alternative), alternative))
+    for segments in segments_list:
+        for i, ch in enumerate(chars):
+            info = kj.get(ch) or {}
+            kun = info.get('kun', [])
+            alternatives = list(dict.fromkeys(kun + info.get('on', [])))
+            for alternative in alternatives:
+                current = segments[i]
+                # 熟語では活用形や一文字だけの極端な短縮を誤読にしない。
+                if alternative == current or len(alternative) > len(current):
+                    continue
+                if len(alternative) == 1 and len(current) >= 2:
+                    continue
+                candidate = ''.join(segments[:i] + [alternative] + segments[i + 1:])
+                if candidate == reading or candidate in forbid:
+                    continue
+                if 1 <= len(candidate) <= len(reading) + 1 and KANA_RE.match(candidate):
+                    kind_priority = 0 if alternative in kun else 1
+                    score = (abs(len(candidate) - len(reading)), kind_priority, candidate)
+                    scored.append((score, candidate))
+        # 2文字以上を同時に訓読みにすると、人が実際にやりがちな読み順になる。
+        if len(chars) >= 2:
+            for i in range(len(chars)):
+                for j in range(i + 1, len(chars)):
+                    ai = (kj.get(chars[i]) or {}).get('kun', [])
+                    aj = (kj.get(chars[j]) or {}).get('kun', [])
+                    if not ai or not aj:
+                        continue
+                    candidate_segments = list(segments)
+                    if len(ai[0]) == len(segments[i]):
+                        candidate_segments[i] = ai[0]
+                    if len(aj[0]) == len(segments[j]):
+                        candidate_segments[j] = aj[0]
+                    candidate = ''.join(candidate_segments)
+                    if candidate != reading and candidate not in forbid and KANA_RE.match(candidate):
+                        scored.append(((abs(len(candidate) - len(reading)), 0, candidate), candidate))
+    out = []
+    for _, candidate in sorted(scored, key=lambda item: item[0]):
+        if candidate not in out:
+            out.append(candidate)
+        if len(out) >= limit:
+            break
+    return out
 
 
 def near_miss_distractors(reading, pool_readings, forbid, rng, limit=3):
@@ -390,6 +504,59 @@ def pick_random_readings(reading, pool_readings, forbid, rng, n, length_delta=1)
     return cands[:n]
 
 
+# 英語UIのローマ字で同じ表示になる候補を生成段階でも除外する。
+# じ/ぢ・ず/づは Romaji.convertMany 側で救済するが、他の衝突はここで防ぐ。
+ROMAJI_BASE = {
+    'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
+    'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',
+    'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
+    'さ': 'sa', 'し': 'shi', 'す': 'su', 'せ': 'se', 'そ': 'so',
+    'ざ': 'za', 'じ': 'ji', 'ず': 'zu', 'ぜ': 'ze', 'ぞ': 'zo',
+    'た': 'ta', 'ち': 'chi', 'つ': 'tsu', 'て': 'te', 'と': 'to',
+    'だ': 'da', 'ぢ': 'ji', 'づ': 'zu', 'で': 'de', 'ど': 'do',
+    'な': 'na', 'に': 'ni', 'ぬ': 'nu', 'ね': 'ne', 'の': 'no',
+    'は': 'ha', 'ひ': 'hi', 'ふ': 'fu', 'へ': 'he', 'ほ': 'ho',
+    'ば': 'ba', 'び': 'bi', 'ぶ': 'bu', 'べ': 'be', 'ぼ': 'bo',
+    'ぱ': 'pa', 'ぴ': 'pi', 'ぷ': 'pu', 'ぺ': 'pe', 'ぽ': 'po',
+    'ま': 'ma', 'み': 'mi', 'む': 'mu', 'め': 'me', 'も': 'mo',
+    'や': 'ya', 'ゆ': 'yu', 'よ': 'yo', 'ら': 'ra', 'り': 'ri',
+    'る': 'ru', 'れ': 're', 'ろ': 'ro', 'わ': 'wa', 'を': 'o', 'ん': 'n',
+}
+ROMAJI_COMBO = {
+    'きゃ': 'kya', 'きゅ': 'kyu', 'きょ': 'kyo', 'ぎゃ': 'gya', 'ぎゅ': 'gyu', 'ぎょ': 'gyo',
+    'しゃ': 'sha', 'しゅ': 'shu', 'しょ': 'sho', 'じゃ': 'ja', 'じゅ': 'ju', 'じょ': 'jo',
+    'ちゃ': 'cha', 'ちゅ': 'chu', 'ちょ': 'cho', 'にゃ': 'nya', 'にゅ': 'nyu', 'にょ': 'nyo',
+    'ひゃ': 'hya', 'ひゅ': 'hyu', 'ひょ': 'hyo', 'びゃ': 'bya', 'びゅ': 'byu', 'びょ': 'byo',
+    'ぴゃ': 'pya', 'ぴゅ': 'pyu', 'ぴょ': 'pyo', 'みゃ': 'mya', 'みゅ': 'myu', 'みょ': 'myo',
+    'りゃ': 'rya', 'りゅ': 'ryu', 'りょ': 'ryo',
+}
+
+
+def romaji_key(kana):
+    chars = list(kana)
+    out = []
+    i = 0
+    while i < len(chars):
+        if chars[i] == 'っ':
+            if i + 1 < len(chars):
+                nxt = ROMAJI_COMBO.get(''.join(chars[i + 1:i + 3]), ROMAJI_BASE.get(chars[i + 1], ''))
+                if nxt and not nxt[0] in 'aiueo':
+                    out.append('t' if nxt.startswith('ch') else nxt[0])
+            i += 1
+            continue
+        if i + 1 < len(chars) and ''.join(chars[i:i + 2]) in ROMAJI_COMBO:
+            out.append(ROMAJI_COMBO[''.join(chars[i:i + 2])])
+            i += 2
+            continue
+        if chars[i] == 'ー':
+            previous = ''.join(out)
+            out.append(next((c for c in reversed(previous) if c in 'aiueo'), ''))
+        else:
+            out.append(ROMAJI_BASE.get(chars[i], chars[i]))
+        i += 1
+    return ''.join(out)
+
+
 # ---------------------------------------------------------------- synthesis
 def make_question(prompt, answer, distractors, qtype):
     ds = list(dict.fromkeys(distractors))[:3]
@@ -406,10 +573,13 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
         if (prompt, answer) in used_global or prompt in used_prompt_level:
             return False
         ds = []
+        used_romaji = {romaji_key(answer)}
         for d in distractors:
-            if d == answer or d in forbidden or d in ds:
+            d_key = romaji_key(d)
+            if d == answer or d in forbidden or d in ds or d_key in used_romaji:
                 continue
             ds.append(d)
+            used_romaji.add(d_key)
             if len(ds) == 3:
                 break
         if len(ds) < 3:
@@ -443,7 +613,15 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
             if not (1 <= len(reading) <= 7):
                 continue
             forbidden = set(r for r in readings if r != reading)
-            distr = near_miss_distractors(reading, pool_ans, forbidden, rng)
+            distr = semantic_distractors(word, reading, kj, forbidden, rng, 3)
+            if len(distr) < 3:
+                for candidate in confusing_variants(reading):
+                    if candidate not in forbidden and candidate not in distr and small_shape_ok(candidate, reading):
+                        distr.append(candidate)
+                    if len(distr) >= 3:
+                        break
+            if len(distr) < 3:
+                distr += near_miss_distractors(reading, pool_ans, forbidden, rng, 3 - len(distr))
             if len(distr) < 3:
                 distr += swap_distractors(word, reading, kj, pool_ans, forbidden, rng)
             need = 3 - len(distr)
@@ -546,8 +724,19 @@ def main():
         used_prompt_level = set()
         qs = synthesize_level(li, pools, kj, words_by_level, used_global,
                               used_prompt_level, pool_readings, rng)
+        level_key = pools[li]['key']
+        for pinned in PINNED_QUESTIONS.get(level_key, []):
+            replaced = False
+            for qi, existing in enumerate(qs):
+                if existing['p'] == pinned['p']:
+                    qs[qi] = pinned
+                    replaced = True
+                    break
+            if not replaced:
+                # 各級の問題数は常にTARGET問に保つ。
+                qs[-1] = pinned
         rng.shuffle(qs)
-        all_q[pools[li]['key']] = qs
+        all_q[level_key] = qs
         nw = sum(1 for q in qs if q['t'] == 'w')
         ns = len(qs) - nw
         asked = set()
