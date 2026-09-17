@@ -255,6 +255,106 @@ def assign_words(words, pools):
 
 
 # ---------------------------------------------------------------- distractors
+# 誤答は「同じ長さのランダムな読み」ではなく、濁点・促音・長音・近い音を
+# 1箇所だけ取り違えた、漢検らしい near-miss を優先する。
+CONFUSION_GROUPS = [
+    'かが', 'きぎ', 'くぐ', 'けげ', 'こご', 'さざ', 'しじ', 'すず', 'せぜ', 'そぞ',
+    'ただ', 'ちぢ', 'つづ', 'てで', 'とど', 'はばぱ', 'ひびぴ', 'ふぶぷ', 'へべぺ',
+    'ほぼぽ', 'じぢ', 'ずづ', 'しち', 'すつ', 'せつ',
+    'あいうえお', 'なにぬねの', 'まみむめも', 'らりるれろ', 'やゆよ', 'わをん',
+]
+CONFUSION = {}
+SMALL_KANA = set('ぁぃぅぇぉゃゅょゎ')
+
+def small_shape_ok(candidate, answer):
+    candidate_shape = tuple((i, ch) for i, ch in enumerate(candidate) if ch in SMALL_KANA)
+    answer_shape = tuple((i, ch) for i, ch in enumerate(answer) if ch in SMALL_KANA)
+    return not candidate_shape or candidate_shape == answer_shape
+
+for _group in CONFUSION_GROUPS:
+    _chars = set(_group)
+    for _ch in _chars:
+        CONFUSION[_ch] = _chars
+
+
+def confusing_variants(reading):
+    """かな1モーラだけを取り違える候補。全てかなのままなので表示上も読み。"""
+    out = []
+    chars = list(reading)
+    for i, ch in enumerate(chars):
+        for alt in CONFUSION.get(ch, ()):
+            if alt != ch:
+                candidate = ''.join(chars[:i] + [alt] + chars[i + 1:])
+                if candidate not in out:
+                    out.append(candidate)
+        # 小書きの有無・促音の見落としも定番のひっかけ。
+        small_to_large = {'ぁ': 'あ', 'ぃ': 'い', 'ぅ': 'う', 'ぇ': 'え', 'ぉ': 'お',
+                          'ゃ': 'や', 'ゅ': 'ゆ', 'ょ': 'よ', 'ゎ': 'わ'}
+        if ch in small_to_large:
+            candidate = ''.join(chars[:i] + [small_to_large[ch]] + chars[i + 1:])
+            if candidate not in out:
+                out.append(candidate)
+    for old, new in (('おう', 'おお'), ('おお', 'おう'), ('えい', 'ええ'), ('ええ', 'えい')):
+        if old in reading:
+            candidate = reading.replace(old, new, 1)
+            if candidate not in out:
+                out.append(candidate)
+    for i, ch in enumerate(chars):
+        if ch == 'っ':
+            candidate = reading[:i] + reading[i + 1:]
+            if candidate not in out:
+                out.append(candidate)
+        elif i + 1 < len(chars) and ch not in 'ゃゅょぁぃぅぇぉっ':
+            candidate = reading[:i + 1] + 'っ' + reading[i + 1:]
+            if candidate not in out:
+                out.append(candidate)
+    return out
+
+
+def confusing_distance(a, b):
+    """濁点違いは安く、一般の置換/挿入は少し高くする編集距離。"""
+    aa, bb = list(a), list(b)
+    previous = list(range(len(bb) + 1))
+    for i, x in enumerate(aa, 1):
+        current = [i]
+        for j, y in enumerate(bb, 1):
+            if x == y:
+                substitution = 0
+            elif CONFUSION.get(x) is CONFUSION.get(y) and CONFUSION.get(x):
+                substitution = 0.45
+            else:
+                substitution = 1.0
+            current.append(min(current[-1] + 0.82, previous[j] + 0.82,
+                               previous[j - 1] + substitution))
+        previous = current
+    return previous[-1]
+
+
+def near_miss_distractors(reading, pool_readings, forbid, rng, limit=3):
+    direct = [x for x in confusing_variants(reading)
+              if x != reading and x not in forbid and small_shape_ok(x, reading) and KANA_RE.match(x)]
+    rng.shuffle(direct)
+    scored = []
+    for candidate in pool_readings:
+        if candidate in forbid or candidate == reading or candidate in direct or not small_shape_ok(candidate, reading):
+            continue
+        if abs(len(candidate) - len(reading)) > 2:
+            continue
+        score = confusing_distance(reading, candidate)
+        if score <= 2.15:
+            scored.append((score, abs(len(candidate) - len(reading)), candidate))
+    rng.shuffle(scored)
+    scored.sort(key=lambda x: (x[0], x[1]))
+    # 本物の辞書読みを優先し、足りない時だけ1モーラの合成 near-miss を使う。
+    out = [x[2] for x in scored[:limit]]
+    for candidate in direct:
+        if len(out) >= limit:
+            break
+        if candidate not in out:
+            out.append(candidate)
+    return out[:limit]
+
+
 def swap_distractors(word, reading, kj, level_pool_answers, forbid, rng, limit=3):
     """reading-swap: replace prefix/suffix on-yomi of a kanji with its alternate on-yomi."""
     cands = []
@@ -343,7 +443,9 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
             if not (1 <= len(reading) <= 7):
                 continue
             forbidden = set(r for r in readings if r != reading)
-            distr = swap_distractors(word, reading, kj, pool_ans, forbidden, rng)
+            distr = near_miss_distractors(reading, pool_ans, forbidden, rng)
+            if len(distr) < 3:
+                distr += swap_distractors(word, reading, kj, pool_ans, forbidden, rng)
             need = 3 - len(distr)
             if need > 0:
                 distr += pick_random_readings(reading, pool_ans, forbidden, rng, need)
@@ -371,7 +473,9 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
             if not (1 <= len(answer) <= 6):
                 continue
             forbidden = set(reads) - {answer}
-            distr = pick_random_readings(answer, pool_ans, forbidden, rng, 3)
+            distr = near_miss_distractors(answer, pool_ans, forbidden, rng)
+            if len(distr) < 3:
+                distr += pick_random_readings(answer, pool_ans, forbidden, rng, 3 - len(distr))
             if try_add(ch, answer, distr, 's', forbidden):
                 n += 1
         return n
@@ -409,7 +513,9 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
                 if not (1 <= len(answer) <= 6):
                     continue
                 forbidden = set(info['kun'] + info['on']) - {answer}
-                distr = pick_random_readings(answer, pool_ans, forbidden, rng, 3)
+                distr = near_miss_distractors(answer, pool_ans, forbidden, rng)
+                if len(distr) < 3:
+                    distr += pick_random_readings(answer, pool_ans, forbidden, rng, 3 - len(distr))
                 try_add(ch, answer, distr, 's', forbidden)
 
     return questions

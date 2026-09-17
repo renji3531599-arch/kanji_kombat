@@ -163,6 +163,7 @@ def client_sim(lua):
 SERVER_MODULES = [
     # QuestionBank は読み込み時に Data/Questions_* を require するので、この順序で
     'QuestionBank', 'StatsService', 'ArenaService', 'LobbyService', 'MatchService',
+    'PurchaseService',
 ]
 
 

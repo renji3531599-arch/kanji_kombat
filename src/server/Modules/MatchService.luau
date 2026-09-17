@@ -1,5 +1,6 @@
 --!nonstrict
--- マッチメイキングと対戦進行、練習モード
+-- マッチメイキング、同時回答バトル、スキル、練習モード。
+-- クライアントは「選んだ番号」しか送れず、正解・制限時間・ダメージは全てサーバー判定。
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,12 +9,13 @@ local Config = require(ReplicatedStorage:WaitForChild("KKShared"):WaitForChild("
 local MatchService = {}
 
 local QuestionBank, StatsService, ArenaService, LobbyService
-local S2C, C2S -- RemoteEvents
+local S2C, C2S
 
-local queues = {}     -- [levelKey] = {player, ...}
-local inMatch = {}    -- [player] = match
-local matches = {}    -- [match] = true
-local practice = {}   -- [player] = state
+local queues = {}       -- [levelKey] = { player, ... }
+local queueMeta = {}    -- [player] = { joinedAt, warned }
+local inMatch = {}      -- [player] = match
+local matches = {}      -- [match] = true
+local practice = {}     -- [player] = state
 
 local function send(player, action, data)
 	data = data or {}
@@ -23,10 +25,21 @@ local function send(player, action, data)
 	end)
 end
 
+local function profileRating(player, levelKey)
+	local profile = StatsService.get(player)
+	return (profile.ratings and profile.ratings[levelKey]) or Config.DEFAULT_RATING
+end
+
 local function broadcastQueueCounts()
 	local counts = {}
 	for key, q in pairs(queues) do
-		counts[key] = #q
+		local n = 0
+		for _, p in ipairs(q) do
+			if p.Parent and not inMatch[p] then
+				n = n + 1
+			end
+		end
+		counts[key] = n
 	end
 	for _, pl in ipairs(Players:GetPlayers()) do
 		send(pl, "queue", counts)
@@ -42,33 +55,31 @@ function MatchService.init(deps)
 	C2S = deps.C2S
 end
 
--- ------------------------------------------------------------- queue
-function MatchService.joinQueue(player, levelKey)
-	if not Config.levelByKey(levelKey) then
-		return
+-- ================================================================ queue
+function MatchService.leaveQueue(player)
+	for key, q in pairs(queues) do
+		for i = #q, 1, -1 do
+			if q[i] == player then
+				table.remove(q, i)
+			end
+		end
+		if #q == 0 then
+			queues[key] = nil
+		end
 	end
-	if inMatch[player] then
-		return
-	end
-	MatchService.leaveQueue(player)
-	if not queues[levelKey] then
-		queues[levelKey] = {}
-	end
-	table.insert(queues[levelKey], player)
-	-- 言語はクライアント側で決める (キー + パラメータだけ送る)
-	send(player, "toast", { key = "toastSearching", args = { level = levelKey } })
+	queueMeta[player] = nil
 	broadcastQueueCounts()
 end
 
-function MatchService.leaveQueue(player)
-	for key, q in pairs(queues) do
-		for i, p in ipairs(q) do
-			if p == player then
-				table.remove(q, i)
-				break
-			end
-		end
+function MatchService.joinQueue(player, levelKey)
+	if not Config.levelByKey(levelKey) or inMatch[player] or practice[player] then
+		return
 	end
+	MatchService.leaveQueue(player)
+	queues[levelKey] = queues[levelKey] or {}
+	queues[levelKey][#queues[levelKey] + 1] = player
+	queueMeta[player] = { joinedAt = os.clock(), warned = false, levelKey = levelKey }
+	send(player, "toast", { key = "toastSearching", args = { level = levelKey } })
 	broadcastQueueCounts()
 end
 
@@ -77,18 +88,32 @@ local function popTwo(levelKey)
 	if not q then
 		return nil
 	end
-	-- 退場済みプレイヤーを掃除
 	for i = #q, 1, -1 do
 		local p = q[i]
 		if not p.Parent or inMatch[p] then
 			table.remove(q, i)
+			queueMeta[p] = nil
 		end
 	end
 	if #q < 2 then
 		return nil
 	end
+
+	-- 最古参を軸に、同じ級の中でレートが最も近い相手を選ぶ。
+	-- 待ち時間は tick で広がるため、過疎級でも置き去りにしない。
 	local a = table.remove(q, 1)
-	local b = table.remove(q, 1)
+	local aRating = profileRating(a, levelKey)
+	local bestIndex, bestScore = 1, math.huge
+	for i, p in ipairs(q) do
+		local ratingGap = math.abs(profileRating(p, levelKey) - aRating)
+		local waited = os.clock() - ((queueMeta[p] and queueMeta[p].joinedAt) or os.clock())
+		local score = ratingGap - math.min(waited * 8, 240)
+		if score < bestScore then
+			bestScore, bestIndex = score, i
+		end
+	end
+	local b = table.remove(q, bestIndex)
+	queueMeta[a], queueMeta[b] = nil, nil
 	return a, b
 end
 
@@ -102,9 +127,16 @@ function MatchService.tick()
 			MatchService.startMatch(lv.key, a, b)
 		end
 	end
+	-- 45秒以上待っている人には練習モードを案内するが、キューからは消さない。
+	for player, meta in pairs(queueMeta) do
+		if not meta.warned and os.clock() - meta.joinedAt >= Config.QUEUE_TIMEOUT then
+			meta.warned = true
+			send(player, "toast", { key = "searching", args = {} })
+		end
+	end
 end
 
--- ------------------------------------------------------------- match
+-- ================================================================ match helpers
 local function teleport(player, cf)
 	local char = player.Character
 	if char and char.PrimaryPart then
@@ -112,13 +144,37 @@ local function teleport(player, cf)
 	end
 end
 
+local function clamp(value, low, high)
+	return math.max(low, math.min(high, value))
+end
+
+local function playerState(match, player)
+	return match.state[player]
+end
+
+local function publicState(state)
+	return {
+		combo = state.combo,
+		bestCombo = state.bestCombo,
+		energy = state.energy,
+		shield = state.shield,
+		focus = state.focus,
+		correct = state.correct,
+		answered = state.answered,
+	}
+end
+
+local function sendState(match, player, action, extra)
+	local data = extra or {}
+	data.state = publicState(playerState(match, player))
+	send(player, action, data)
+end
+
 function MatchService.startMatch(levelKey, p1, p2)
 	local arena = ArenaService.get(levelKey)
-	if not arena then
+	if not arena or not p1.Parent or not p2.Parent then
 		return
 	end
-	inMatch[p1] = true
-	inMatch[p2] = true
 	MatchService.leaveQueue(p1)
 	MatchService.leaveQueue(p2)
 
@@ -126,13 +182,20 @@ function MatchService.startMatch(levelKey, p1, p2)
 		levelKey = levelKey,
 		players = { p1, p2 },
 		hp = { [p1] = Config.MAX_HP, [p2] = Config.MAX_HP },
+		state = {
+			[p1] = { combo = 0, bestCombo = 0, energy = 0, shield = 0, focus = 0, correct = 0, answered = 0 },
+			[p2] = { combo = 0, bestCombo = 0, energy = 0, shield = 0, focus = 0, correct = 0, answered = 0 },
+		},
 		exclude = {},
 		round = 0,
 		answers = {},
 		answerCount = 0,
+		questionId = 0,
+		activeQuestion = nil,
 		dead = false,
 	}
 	matches[match] = true
+	inMatch[p1], inMatch[p2] = match, match
 
 	task.spawn(function()
 		teleport(p1, arena.spawnA)
@@ -141,75 +204,95 @@ function MatchService.startMatch(levelKey, p1, p2)
 		send(p2, "matchIntro", { levelKey = levelKey, opponent = p1.DisplayName, total = Config.ROUND_COUNT })
 		task.wait(Config.INTRO_TIME)
 
-		local loser = nil
+		local winner, reason
 		for round = 1, Config.ROUND_COUNT do
 			if match.dead then
-				break
+				return
 			end
-			local ko = MatchService.playRound(match, round, false)
-			if ko then
-				loser = ko
+			local outcome = MatchService.playRound(match, round, false)
+			if outcome and outcome.winner then
+				winner, reason = outcome.winner, outcome.reason
 				break
 			end
 			task.wait(0.35)
 		end
-		if match.dead then
-			MatchService.endMatch(match, nil)
-			return
+
+		-- 通常ラウンドで決着しなかった場合、HP差を優先する。
+		if not winner and match.hp[p1] ~= match.hp[p2] then
+			winner = match.hp[p1] > match.hp[p2] and p1 or p2
+			reason = "HP"
 		end
 
-		-- 決着してなければサドンデス (最大10問)
+		-- HPが同じなら、先に正答した側だけが勝つサドンデスへ。
 		local suddenCount = 0
-		while not match.dead and not loser and match.hp[p1] == match.hp[p2] and suddenCount < 10 do
+		while not match.dead and not winner and match.hp[p1] == match.hp[p2] and suddenCount < 10 do
 			suddenCount = suddenCount + 1
-			loser = MatchService.playRound(match, match.round + 1, true)
-			if loser == "none" then
-				loser = nil -- 両方不正解なら次のサドンデス問へ
+			local outcome = MatchService.playRound(match, Config.ROUND_COUNT + suddenCount, true)
+			if outcome and outcome.winner then
+				winner, reason = outcome.winner, outcome.reason
+				break
 			end
 		end
 
-		local winner, reason
-		if loser then
-			winner = (loser == p1) and p2 or p1
-			reason = "KO"
-		elseif match.hp[p1] > match.hp[p2] then
-			winner = p1
-			loser = p2
+		if not winner and match.hp[p1] ~= match.hp[p2] then
+			winner = match.hp[p1] > match.hp[p2] and p1 or p2
 			reason = "HP"
-		elseif match.hp[p2] > match.hp[p1] then
-			winner = p2
-			loser = p1
-			reason = "HP"
-		else
-			-- 完全引き分け: 勝数に影響させず終了
-			send(p1, "matchEnd", { draw = true })
-			send(p2, "matchEnd", { draw = true })
+		end
+
+		if not winner then
+			match.finished = true
+			StatsService.applyDraw(p1, p2)
+			send(p1, "matchEnd", { draw = true, summary = MatchService.summaryFor(match, p1) })
+			send(p2, "matchEnd", { draw = true, summary = MatchService.summaryFor(match, p2) })
 			task.wait(2.5)
 			MatchService.endMatch(match, nil)
 			return
 		end
 
-		local dw = StatsService.applyResult(levelKey, winner, loser)
-		for _, p in ipairs(match.players) do
-			local prof = StatsService.get(p)
-			local isWin = (p == winner)
-			send(p, "matchEnd", {
-				win = isWin,
-				reason = reason,
-				opponent = (p == winner) and loser.DisplayName or winner.DisplayName,
-				rating = prof.ratings[levelKey],
-				delta = isWin and dw or -dw,
-				wins = prof.wins,
-				losses = prof.losses,
-				streak = prof.streak,
-			})
-		end
+		MatchService.finishMatch(match, winner, reason or "KO")
 		task.wait(4)
 		MatchService.endMatch(match, winner)
 	end)
 end
 
--- 1ラウンド進行。KO時は敗者playerを返す。サドンデス時は勝者を返す("none"=両方誤答)
+function MatchService.summaryFor(match, player)
+	local state = playerState(match, player)
+	return {
+		correct = state.correct,
+		total = state.answered,
+		bestCombo = state.bestCombo,
+		accuracy = state.answered > 0 and math.floor(state.correct / state.answered * 100 + 0.5) or 0,
+	}
+end
+
+function MatchService.finishMatch(match, winner, reason)
+	if match.dead or match.finished then
+		return
+	end
+	match.finished = true
+	local loser = (match.players[1] == winner) and match.players[2] or match.players[1]
+	local delta = StatsService.applyResult(match.levelKey, winner, loser)
+	for _, p in ipairs(match.players) do
+		local isWin = p == winner
+		local summary = MatchService.summaryFor(match, p)
+		local reward = StatsService.awardMatch(p, isWin, summary.bestCombo, summary.correct, summary.total)
+		local profile = StatsService.get(p)
+		send(p, "matchEnd", {
+			win = isWin,
+			reason = reason,
+			opponent = (isWin and loser or winner).DisplayName,
+			rating = profile.ratings[match.levelKey],
+			delta = isWin and delta or -delta,
+			wins = profile.wins,
+			losses = profile.losses,
+			streak = profile.streak,
+			summary = summary,
+			reward = reward,
+		})
+	end
+end
+
+-- 1ラウンド進行。return = { winner = Player?, reason = string? }
 function MatchService.playRound(match, round, sudden)
 	match.round = round
 	match.answers = {}
@@ -219,117 +302,183 @@ function MatchService.playRound(match, round, sudden)
 		return nil
 	end
 	local choices, correct = QuestionBank.pack(q)
-	local deadline = os.clock() + Config.QUESTION_TIME
-	match.correct = correct
-	match.deadline = deadline
+	local started = os.clock()
+	local deadline = started + Config.QUESTION_TIME
+	match.questionId = match.questionId + 1
+	match.activeQuestion = { id = match.questionId, round = round, correct = correct, deadline = deadline, started = started }
 
-	local hp1, hp2 = match.hp[match.players[1]], match.hp[match.players[2]]
-	send(match.players[1], "question", {
-		round = round, total = Config.ROUND_COUNT, sudden = sudden,
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
-		timeLimit = Config.QUESTION_TIME, hpMe = hp1, hpOp = hp2,
+	local p1, p2 = match.players[1], match.players[2]
+	sendState(match, p1, "question", {
+		questionId = match.questionId, round = round, total = Config.ROUND_COUNT,
+		sudden = sudden, prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		timeLimit = Config.QUESTION_TIME, hpMe = match.hp[p1], hpOp = match.hp[p2],
+		opState = publicState(playerState(match, p2)),
 	})
-	send(match.players[2], "question", {
-		round = round, total = Config.ROUND_COUNT, sudden = sudden,
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
-		timeLimit = Config.QUESTION_TIME, hpMe = hp2, hpOp = hp1,
+	sendState(match, p2, "question", {
+		questionId = match.questionId, round = round, total = Config.ROUND_COUNT,
+		sudden = sudden, prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		timeLimit = Config.QUESTION_TIME, hpMe = match.hp[p2], hpOp = match.hp[p1],
+		opState = publicState(playerState(match, p1)),
 	})
 
 	while os.clock() < deadline and match.answerCount < 2 do
 		task.wait(0.05)
 	end
-	task.wait(0.1) -- 正答直前の提出を受け取る猶予
+	task.wait(0.05)
 
-	local function resultOf(p)
-		local a = match.answers[p]
-		if not a or os.clock() - 0 > deadline + 0.6 then
-			-- 期内のみ有効 (下で判定し直す)
-		end
-		if not a then
-			return { correct = false, t = math.huge, idx = 0 }
+	local function resultOf(player)
+		local a = match.answers[player]
+		if not a or a.t > deadline + Config.QUESTION_GRACE then
+			return { correct = false, t = math.huge, idx = 0, elapsed = Config.QUESTION_TIME }
 		end
 		return {
-			correct = (a.idx == match.correct) and a.t <= deadline + 0.6,
+			correct = a.idx == correct,
 			t = a.t,
 			idx = a.idx,
+			elapsed = math.max(0, a.t - started),
 		}
 	end
 
-	local r1 = resultOf(match.players[1])
-	local r2 = resultOf(match.players[2])
+	local r1, r2 = resultOf(p1), resultOf(p2)
+	local firstT = math.min(r1.correct and r1.t or math.huge, r2.correct and r2.t or math.huge)
+	local first1 = r1.correct and r1.t == firstT
+	local first2 = r2.correct and r2.t == firstT
 
-	-- ダメージ計算
-	local dmg1, dmg2 = 0, 0
-	local firstT = math.min(r1.t, r2.t)
-	if r1.correct then
-		dmg1 = Config.DMG_BASE
-		if r1.t - (deadline - Config.QUESTION_TIME) <= 3 then
-			dmg1 = dmg1 + Config.DMG_FAST_BONUS
+	local function rawDamage(player, result, isFirst)
+		local state = playerState(match, player)
+		state.answered = state.answered + 1
+		if not result.correct then
+			state.combo = 0
+			StatsService.recordAnswer(player, false, result.elapsed)
+			return 0, { fast = false, first = false, focus = false, combo = 0 }
 		end
-		if r1.t == firstT then
-			dmg1 = dmg1 + Config.DMG_FIRST_BONUS
+		state.correct = state.correct + 1
+		state.combo = math.min(Config.DMG_COMBO_CAP, state.combo + 1)
+		state.bestCombo = math.max(state.bestCombo, state.combo)
+		local damage = Config.DMG_BASE + math.max(0, state.combo - 1) * Config.DMG_COMBO_STEP
+		local fast = result.elapsed <= 3
+		if fast then damage = damage + Config.DMG_FAST_BONUS end
+		if isFirst then damage = damage + Config.DMG_FIRST_BONUS end
+		local focused = state.focus > 0
+		if focused then
+			damage = math.floor(damage * Config.DMG_FOCUS_MULTIPLIER + 0.5)
+			state.focus = 0
 		end
+		local gained = Config.ENERGY_CORRECT + (fast and Config.ENERGY_FAST or 0)
+		state.energy = clamp(state.energy + gained, 0, Config.ENERGY_MAX)
+		StatsService.recordAnswer(player, true, result.elapsed)
+		return damage, { fast = fast, first = isFirst, focus = focused, combo = state.combo, energy = gained }
 	end
-	if r2.correct then
-		dmg2 = Config.DMG_BASE
-		if r2.t - (deadline - Config.QUESTION_TIME) <= 3 then
-			dmg2 = dmg2 + Config.DMG_FAST_BONUS
-		end
-		if r2.t == firstT then
-			dmg2 = dmg2 + Config.DMG_FIRST_BONUS
-		end
-	end
-	match.hp[match.players[1]] = math.max(0, hp1 - dmg2)
-	match.hp[match.players[2]] = math.max(0, hp2 - dmg1)
 
-	local nowHp1, nowHp2 = match.hp[match.players[1]], match.hp[match.players[2]]
-	send(match.players[1], "answerResult", {
-		round = round, correct = r1.correct, correctIdx = match.correct,
-		myIdx = r1.idx, dealt = dmg1, taken = dmg2,
-		hpMe = nowHp1, hpOp = nowHp2,
-		opCorrect = r2.correct,
-	})
-	send(match.players[2], "answerResult", {
-		round = round, correct = r2.correct, correctIdx = match.correct,
-		myIdx = r2.idx, dealt = dmg2, taken = dmg1,
-		hpMe = nowHp2, hpOp = nowHp1,
-	})
+	local raw1, parts1 = rawDamage(p1, r1, first1)
+	local raw2, parts2 = rawDamage(p2, r2, first2)
+	local function takeDamage(target, amount)
+		local state = playerState(match, target)
+		local blocked = 0
+		if amount > 0 and state.shield > 0 then
+			blocked = math.floor(amount * Config.SHIELD_REDUCTION + 0.5)
+			amount = math.max(0, amount - blocked)
+			state.shield = 0
+		end
+		return amount, blocked
+	end
+	local taken1, blocked1 = takeDamage(p1, raw2)
+	local taken2, blocked2 = takeDamage(p2, raw1)
+	match.hp[p1] = math.max(0, match.hp[p1] - taken1)
+	match.hp[p2] = math.max(0, match.hp[p2] - taken2)
+
+	local function resultPayload(me, other, result, parts, dealt, taken, blocked)
+		return {
+			round = round, questionId = match.questionId, correct = result.correct,
+			correctIdx = correct, myIdx = result.idx, dealt = dealt, taken = taken,
+			blocked = blocked, opCorrect = result == r1 and r2.correct or r1.correct,
+			state = publicState(playerState(match, me)),
+			opState = publicState(playerState(match, other)),
+			damageParts = parts,
+			hpMe = match.hp[me], hpOp = match.hp[other],
+		}
+	end
+	send(p1, "answerResult", resultPayload(p1, p2, r1, parts1, raw1, taken1, blocked1))
+	send(p2, "answerResult", resultPayload(p2, p1, r2, parts2, raw2, taken2, blocked2))
+	match.activeQuestion = nil
+
+	-- KO は「片方だけ0」なら即時、両方なら先に正答した方を勝者にする。
+	if match.hp[p1] <= 0 or match.hp[p2] <= 0 then
+		if match.hp[p1] <= 0 and match.hp[p2] <= 0 then
+			if first1 and not first2 then return { winner = p1, reason = "KO" } end
+			if first2 and not first1 then return { winner = p2, reason = "KO" } end
+			return nil
+		end
+		return { winner = match.hp[p1] <= 0 and p2 or p1, reason = "KO" }
+	end
 
 	if sudden then
-		if r1.correct and r2.correct then
-			return (r1.t <= r2.t) and match.players[2] or match.players[1] -- 速い方の相手が敗者…いや勝者判定は呼び出し側
-		elseif r1.correct then
-			return match.players[2] == nil and "none" or "win1"
-		elseif r2.correct then
-			return "win2"
+		if r1.correct and not r2.correct then
+			return { winner = p1, reason = "SUDDEN" }
+		elseif r2.correct and not r1.correct then
+			return { winner = p2, reason = "SUDDEN" }
+		elseif r1.correct and r2.correct and first1 ~= first2 then
+			return { winner = first1 and p1 or p2, reason = "SUDDEN" }
 		end
-		return "none"
-	end
-
-	if nowHp1 <= 0 then
-		return match.players[1]
-	elseif nowHp2 <= 0 then
-		return match.players[2]
 	end
 	return nil
 end
 
-function MatchService.endMatch(match, winner)
-	match.dead = true
-	matches[match] = nil
-	for _, p in ipairs(match.players) do
-		inMatch[p] = nil
-		teleport(p, LobbyService.getSpawn())
-		send(p, "toLobby", {})
+function MatchService.useSkill(player, skill)
+	local match = inMatch[player]
+	if not match or match.dead or not match.activeQuestion then
+		return
+	end
+	local state = playerState(match, player)
+	if skill == "guard" then
+		if state.energy < Config.ENERGY_GUARD_COST then
+			send(player, "skillResult", { ok = false, key = "skillNotReady" })
+			return
+		end
+		state.energy = state.energy - Config.ENERGY_GUARD_COST
+		state.shield = Config.GUARD_SHIELD
+		sendState(match, player, "skillResult", { ok = true, key = "skillUsed", args = { skill = "Guard" } })
+	elseif skill == "focus" then
+		if state.energy < Config.ENERGY_FOCUS_COST then
+			send(player, "skillResult", { ok = false, key = "skillNotReady" })
+			return
+		end
+		state.energy = state.energy - Config.ENERGY_FOCUS_COST
+		state.focus = 1
+		sendState(match, player, "skillResult", { ok = true, key = "skillUsed", args = { skill = "Focus" } })
 	end
 end
 
--- ------------------------------------------------------------- practice
-function MatchService.practiceStart(player, levelKey)
-	if not Config.levelByKey(levelKey) then
+function MatchService.endMatch(match, winner)
+	if not matches[match] then
 		return
 	end
-	practice[player] = { levelKey = levelKey, streak = 0, exclude = {}, active = true }
+	match.dead = true
+	match.activeQuestion = nil
+	matches[match] = nil
+	for _, p in ipairs(match.players) do
+		if inMatch[p] == match then
+			inMatch[p] = nil
+		end
+		teleport(p, LobbyService.getSpawn())
+		send(p, "toLobby", {})
+	end
+	broadcastQueueCounts()
+end
+
+-- ================================================================ practice
+function MatchService.practiceStart(player, levelKey)
+	if not Config.levelByKey(levelKey) or inMatch[player] then
+		return
+	end
+	MatchService.leaveQueue(player)
+	practice[player] = {
+		levelKey = levelKey,
+		streak = 0,
+		exclude = {},
+		active = true,
+		questionId = 0,
+	}
 	MatchService.practiceNext(player)
 end
 
@@ -344,28 +493,31 @@ function MatchService.practiceNext(player)
 	end
 	local choices, correct = QuestionBank.pack(q)
 	st.correct = correct
+	st.questionId = st.questionId + 1
+	st.started = os.clock()
+	st.deadline = st.started + 20
 	send(player, "practiceQ", {
-		prompt = q.p, isKanji = (#q.p == 1), choices = choices,
-		timeLimit = 20, streak = st.streak,
-		levelKey = st.levelKey,
+		questionId = st.questionId, prompt = q.p, isKanji = (#q.p == 1), choices = choices,
+		timeLimit = 20, streak = st.streak, levelKey = st.levelKey,
 	})
 end
 
 function MatchService.practiceSubmit(player, idx)
 	local st = practice[player]
-	if not st or not st.active then
+	if not st or not st.active or not st.correct or os.clock() > st.deadline + Config.QUESTION_GRACE then
 		return
 	end
-	if not st.correct then
-		return -- まだ問題を出していない (最初の practiceQ が届く前のクリック)
-	end
-	local ok = (idx == st.correct)
+	local ok = idx == st.correct
+	local correctIdx = st.correct
 	if ok then
 		st.streak = st.streak + 1
 	else
 		st.streak = 0
 	end
-	send(player, "practiceResult", { correct = ok, correctIdx = st.correct, streak = st.streak })
+	StatsService.recordAnswer(player, ok, math.max(0, os.clock() - st.started))
+	StatsService.awardPractice(player, ok)
+	st.correct = nil
+	send(player, "practiceResult", { correct = ok, correctIdx = correctIdx, streak = st.streak })
 	if ok then
 		MatchService.practiceNext(player)
 	end
@@ -379,7 +531,7 @@ function MatchService.practiceStop(player)
 	practice[player] = nil
 end
 
--- ------------------------------------------------------------- router
+-- ================================================================ router
 function MatchService.onRemote(player, data)
 	if type(data) ~= "table" or type(data.action) ~= "string" then
 		return
@@ -389,20 +541,19 @@ function MatchService.onRemote(player, data)
 		MatchService.joinQueue(player, data.levelKey)
 	elseif a == "cancelQueue" then
 		MatchService.leaveQueue(player)
-	elseif a == "submit" and inMatch[player] then
-		-- find the match
-		for m in pairs(matches) do
-			if m.players[1] == player or m.players[2] == player then
-				if m.round == data.round and not m.answers[player] and type(data.idx) == "number" then
-					local idx = math.floor(data.idx)
-					if idx >= 1 and idx <= 4 then
-						m.answers[player] = { idx = idx, t = os.clock() }
-						m.answerCount = m.answerCount + 1
-					end
-				end
-				break
+	elseif a == "submit" then
+		local match = inMatch[player]
+		local q = match and match.activeQuestion
+		if q and q.round == data.round and (data.questionId == nil or q.id == data.questionId) and not match.answers[player]
+			and type(data.idx) == "number" and os.clock() <= q.deadline + Config.QUESTION_GRACE then
+			local idx = math.floor(data.idx)
+			if idx >= 1 and idx <= 4 then
+				match.answers[player] = { idx = idx, t = os.clock() }
+				match.answerCount = match.answerCount + 1
 			end
 		end
+	elseif a == "useSkill" and type(data.skill) == "string" then
+		MatchService.useSkill(player, data.skill)
 	elseif a == "practiceStart" and type(data.levelKey) == "string" then
 		MatchService.practiceStop(player)
 		MatchService.practiceStart(player, data.levelKey)
@@ -423,25 +574,24 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	MatchService.leaveQueue(player)
 	MatchService.practiceStop(player)
-	if inMatch[player] then
-		for m in pairs(matches) do
-			if m.players[1] == player or m.players[2] == player then
-				local other = (m.players[1] == player) and m.players[2] or m.players[1]
-				if not m.dead then
-					m.dead = true
-					-- 残った側を勝ちに
-					local prof = StatsService.get(other)
-					send(other, "matchEnd", {
-						win = true, reason = "leave",
-						opponent = player.DisplayName,
-						rating = prof.ratings[m.levelKey],
-						delta = 10, wins = prof.wins, losses = prof.losses, streak = prof.streak,
-					})
-					task.delay(3, function()
-						MatchService.endMatch(m, other)
-					end)
-				end
-			end
+	local match = inMatch[player]
+	if match and not match.dead and not match.finished then
+		local other = match.players[1] == player and match.players[2] or match.players[1]
+		if other and other.Parent then
+			match.dead = true
+			local delta = StatsService.applyResult(match.levelKey, other, player)
+			local reward = StatsService.awardMatch(other, true, playerState(match, other).bestCombo,
+				playerState(match, other).correct, playerState(match, other).answered)
+			local profile = StatsService.get(other)
+			send(other, "matchEnd", {
+				win = true, reason = "leave", opponent = player.DisplayName,
+				rating = profile.ratings[match.levelKey], delta = delta,
+				wins = profile.wins, losses = profile.losses, streak = profile.streak,
+				summary = MatchService.summaryFor(match, other), reward = reward,
+			})
+			task.delay(3, function()
+				MatchService.endMatch(match, other)
+			end)
 		end
 	end
 end)

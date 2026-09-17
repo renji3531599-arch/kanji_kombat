@@ -15,7 +15,10 @@ Roblox で遊べる**漢字読みオンリーのオンライン対戦ゲーム**
 * **12,000 questions** — 12 levels × 1,000, following the Japan Kanji Aptitude Test (*Kanken*) grades 10 → 1. Grade 10 is 1st-year elementary (80 kanji); grade 1 is expert level (~6,000 kanji).
 * **Bilingual UI** — Japanese for players whose Roblox locale is `ja*`, English for everyone else, with a **🌐 toggle** in the lobby (your choice is saved).
 * **Made for learners** — in English mode the choices show **romaji + kana** (e.g. `kyoushuu / きょうしゅう`), and each level is labelled with its school grade and a rough **JLPT equivalent** (`Level 10 · Grade 1 (elementary) · ≈ JLPT N5`).
-* **Match rules** — 10 rounds, 12 seconds per question, 100 HP, base damage 20 (+10 for a fast answer, +5 for answering first); sudden death if HP is tied; Elo rating per level (starts at 1000).
+* **Match rules** — 10 simultaneous rounds, 12 seconds per question, 100 HP, server-authoritative damage, and sudden death if HP is tied.
+* **Mind-game combat** — correct-answer combo chains, spirit meter, Guard (damage reduction) and Focus (damage multiplier) skills, quick/first-answer bonuses, shields, KO resolution, and a post-match accuracy/combo/reward summary.
+* **Fair retention** — level-specific Elo matchmaking, ranks, XP, coins, daily battle rewards, and cosmetics. Robux purchases are optional cosmetics or server-granted coin/XP packs; they never reveal or buy the correct answer.
+* **Trick-choice questions** — the four readings are deliberately near-miss distractors: dakuten/handakuten, じ/ぢ, ず/づ, long-vowel, sokuon, and one-mora reading swaps are prioritized over unrelated random words.
 
 Run it: open `KanjiKombat.rbxlx` in Roblox Studio and press ▶ Play (publish the place and raise the max player count for online matches).
 
@@ -54,6 +57,20 @@ Run it: open `KanjiKombat.rbxlx` in Roblox Studio and press ▶ Play (publish th
 - 誤答・タイムオーバーはダメージなし
 - 10問終了時にHPが同点なら**サドンデス**
 - 勝敗で級ごとの **Eloレーティング**（初期値1000）が変動。ロビーUIに各級のレートを表示
+- 正解を重ねるほど**コンボ**が伸び、気勢（SPIRIT）がたまる。気勢を使って「防壁」または「集中」を発動できる
+- 防壁は次に受けるダメージを軽減、集中は次の正解のダメージを増幅。どちらもサーバーが所持量・使用タイミングを検証
+- 10問後にHPが同じなら、先に正解した人だけが勝つサドンデス（最大10問）。同時KOや完全同点も定義済み
+- すべてのダメージ、回答期限、Elo、報酬はサーバー判定。回答の二重送信・古い問題番号・期限切れ送信を拒否
+
+### 4択を「全部ひっかけ」にする方針
+
+各問題は正解以外の3つも、同じような長さ・音の**実在する読み**を最優先します。濁点の有無、促音の見落とし、長音の揺れ、似た音の置換を組み合わせるため、4択のどれを見ても一瞬迷う設計です。問題生成器の `near_miss_distractors` が距離を計算し、英語UIでローマ字が同じになった場合は全12,000問の検証で弾きます。
+
+### コスメ・Robuxショップ
+
+ロビーの **商店 / Shop** から、コインパック、VIP道場オーラ、ネオン称号、修行パックを購入できます。Developer Product は `MarketplaceService.ProcessReceipt`、Game Pass はサーバーの所有権確認と購入完了イベントで付与し、二重付与防止用のレシート履歴も保存します。購入内容は対戦の正解やダメージを有利にしないため、無課金プレイヤーと同じ競技条件です。
+
+実際に公開する前に `src/shared/GameConfig.luau` の `SHOP_ITEMS` に Creator Dashboard で作成した Developer Product / Game Pass の ID を入力してください。ID が `0` の間は、ショップは表示されますが安全に「未設定」と表示し、購入プロンプトは開きません。詳しい公開手順は [docs/MONETIZATION.md](docs/MONETIZATION.md) を参照してください。
 
 ## セットアップ
 
@@ -84,7 +101,8 @@ src/
     Modules/
       QuestionBank.luau         # 12レベルの問題バンク
       MatchService.luau         # マッチメイキング・対戦進行・練習モード
-      StatsService.luau         # DataStore保存・Eloレーティング・リーダーボード
+      StatsService.luau         # DataStore保存・Elo・XP/コイン・ランク
+      PurchaseService.luau      # Robux商品、レシート、Game Pass所有権、ショップ状態
       ArenaService.luau         # 級ごとの対戦アリーナ生成
       LobbyService.luau         # ロビーマップ生成
     data/

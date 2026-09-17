@@ -79,6 +79,31 @@ function LobbyService.build(folder)
 	sub.Text = "READING BATTLES / 読み勝負 ・ 漢検10級〜1級 ・ 12,000問"
 	sub.Parent = gui
 
+	-- 商店の立体サイン。画面UIと同じ名前にして初見でも導線を作る。
+	local shopSign = part({
+		Name = "ShopSign",
+		Size = Vector3.new(16, 5, 0.8),
+		Position = Vector3.new(44, 8, -34),
+		Color = Color3.fromRGB(35, 24, 48),
+		Parent = lobby,
+	})
+	local shopGui = Instance.new("SurfaceGui")
+	shopGui.Face = Enum.NormalId.Front
+	shopGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	shopGui.PixelsPerStud = 35
+	shopGui.Parent = shopSign
+	local shopText = Instance.new("TextLabel")
+	shopText.Size = UDim2.fromScale(1, 1)
+	shopText.BackgroundTransparency = 1
+	shopText.Font = Enum.Font.GothamBlack
+	shopText.TextScaled = true
+	shopText.TextColor3 = Color3.fromRGB(245, 210, 90)
+	shopText.Text = "SHOP / 商店"
+	shopText.Parent = shopGui
+	for _, x in ipairs({ -6, 6 }) do
+		part({ Name = "ShopPillar", Size = Vector3.new(1, 8, 1), Position = Vector3.new(44 + x, 4, -34), Color = Color3.fromRGB(100, 55, 130), Material = Enum.Material.Neon, Parent = lobby })
+	end
+
 	-- 周囲の灯篭風ポール
 	for i = -1, 1, 2 do
 		for j = -1, 1, 2 do

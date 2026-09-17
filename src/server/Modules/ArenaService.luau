@@ -34,8 +34,26 @@ function ArenaService.build(folder)
 			Size = Vector3.new(30, 2, 60),
 			Position = Vector3.new(0, y, 0),
 			Color = Color3.fromRGB(35, 35, 45),
+			Material = Enum.Material.Slate,
 			Parent = f,
 		})
+
+		-- 両陣営のスポーン台。対戦開始時に色が見えるので「自分の側」が直感的。
+		for side, z in ipairs({ -20, 20 }) do
+			local pad = part({
+				Name = side == 1 and "SpawnPadA" or "SpawnPadB",
+				Size = Vector3.new(12, 0.35, 8),
+				Position = Vector3.new(0, y + 1.2, z),
+				Color = side == 1 and Color3.fromRGB(70, 125, 170) or Color3.fromRGB(170, 65, 85),
+				Material = Enum.Material.Neon,
+				Parent = f,
+			})
+			local light = Instance.new("PointLight")
+			light.Color = pad.Color
+			light.Brightness = 1.4
+			light.Range = 12
+			light.Parent = pad
+		end
 
 		-- センターライン
 		part({
@@ -64,6 +82,28 @@ function ArenaService.build(folder)
 			Material = Enum.Material.Neon,
 			Parent = f,
 		})
+
+		-- 観戦者にも級が分かる小さな立体看板。
+		local sign = part({
+			Name = "LevelSign",
+			Size = Vector3.new(18, 4, 0.35),
+			Position = Vector3.new(0, y + 8, 0),
+			Color = Color3.fromRGB(20, 18, 28),
+			Parent = f,
+		})
+		local signGui = Instance.new("SurfaceGui")
+		signGui.Face = Enum.NormalId.Front
+		signGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		signGui.PixelsPerStud = 30
+		signGui.Parent = sign
+		local signText = Instance.new("TextLabel")
+		signText.Size = UDim2.fromScale(1, 1)
+		signText.BackgroundTransparency = 1
+		signText.Font = Enum.Font.GothamBlack
+		signText.TextScaled = true
+		signText.TextColor3 = color
+		signText.Text = lv.label .. "  /  " .. (lv.en and lv.en.label or lv.label)
+		signText.Parent = signGui
 
 		-- 透明な壁 (落下防止)
 		local wallDefs = {

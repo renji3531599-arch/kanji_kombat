@@ -28,6 +28,7 @@ local StatsService = require(Modules:WaitForChild("StatsService"))
 local ArenaService = require(Modules:WaitForChild("ArenaService"))
 local LobbyService = require(Modules:WaitForChild("LobbyService"))
 local MatchService = require(Modules:WaitForChild("MatchService"))
+local PurchaseService = require(Modules:WaitForChild("PurchaseService"))
 
 math.randomseed(os.time() + os.clock() * 1000)
 
@@ -48,12 +49,21 @@ MatchService.init({
 	C2S = C2S,
 })
 
+PurchaseService.init({
+	StatsService = StatsService,
+	S2C = S2C,
+})
+
 -- クライアントからの操作 (対戦エントリー / 回答 / 練習モード) を受け取る。
 -- ここを繋がないとサーバーは何も受信せず、練習モードは問題が1問も出ない。
 C2S.OnServerEvent:Connect(function(player, data)
 	local ok, err = pcall(MatchService.onRemote, player, data)
 	if not ok then
 		warn("[MatchService] onRemote: " .. tostring(err))
+	end
+	local shopOk, shopErr = pcall(PurchaseService.onRemote, player, data)
+	if not shopOk then
+		warn("[PurchaseService] onRemote: " .. tostring(shopErr))
 	end
 end)
 
@@ -69,6 +79,15 @@ local function sanitizeProfile(profile)
 		losses = profile.losses,
 		streak = profile.streak,
 		bestStreak = profile.bestStreak,
+		coins = profile.coins or 0,
+		xp = profile.xp or 0,
+		level = profile.level or 1,
+		correctAnswers = profile.correctAnswers or 0,
+		answeredQuestions = profile.answeredQuestions or 0,
+		bestCombo = profile.bestCombo or 0,
+		daily = profile.daily or { battles = 0, claimed = false },
+		inventory = profile.inventory or {},
+		equipped = profile.equipped or { title = "rookie", aura = "none" },
 		locale = profile.locale, -- 保存された表示言語 (未設定なら nil = 自動判定)
 	}
 end
@@ -79,11 +98,17 @@ end
 
 Players.PlayerAdded:Connect(function(player)
 	StatsService.load(player)
+	task.spawn(function()
+		PurchaseService.syncPasses(player)
+	end)
 end)
 
 -- Studio で既に参加済みの場合
 for _, player in ipairs(Players:GetPlayers()) do
-	task.spawn(StatsService.load, player)
+	task.spawn(function()
+		StatsService.load(player)
+		PurchaseService.syncPasses(player)
+	end)
 end
 
 -- ------------------------------------------------- loops

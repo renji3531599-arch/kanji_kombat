@@ -103,6 +103,108 @@ local STRINGS = {
 		en = "Looking for an opponent at {level}…",
 	},
 
+	-- ---------------------------------------------------------- lobby progression / retention
+	coinsLabel = {
+		ja = "コイン {coins}",
+		en = "Coins {coins}",
+	},
+	xpLabel = {
+		ja = "EXP {xp} · Lv.{level}",
+		en = "EXP {xp} · Lv.{level}",
+	},
+	rankLabel = {
+		ja = "ランク {rank} · レート {rating}",
+		en = "Rank {rank} · Rating {rating}",
+	},
+	dailyProgress = {
+		ja = "デイリー：対戦 {done}/{goal}　報酬 {reward}コイン",
+		en = "Daily: {done}/{goal} battles　Reward {reward} coins",
+	},
+	streakBonus = {
+		ja = "連勝ボーナス ×{streak}",
+		en = "Win streak bonus ×{streak}",
+	},
+	shopButton = {
+		ja = "商店",
+		en = "Shop",
+	},
+	shopTitle = {
+		ja = "漢字商店",
+		en = "Kanji Shop",
+	},
+	shopSubtitle = {
+		ja = "コスメと応援アイテム。知識と勝利は自分の力で！",
+		en = "Cosmetics and boosts. Knowledge and wins stay skill-based!",
+	},
+	shopBalance = {
+		ja = "所持コイン {coins}",
+		en = "Balance: {coins} coins",
+	},
+	shopBuy = {
+		ja = "購入　{robux} Robux",
+		en = "Buy　{robux} Robux",
+	},
+	shopOwned = {
+		ja = "所持済み",
+		en = "Owned",
+	},
+	shopClose = {
+		ja = "閉じる",
+		en = "Close",
+	},
+	shopUnavailable = {
+		ja = "この商品のIDが未設定です。Creator Dashboardで設定してください。",
+		en = "This item is not configured yet. Set its ID in Creator Dashboard.",
+	},
+	purchasePending = {
+		ja = "購入画面を開いています…",
+		en = "Opening purchase prompt…",
+	},
+	purchaseSuccess = {
+		ja = "購入ありがとう！ {item} を受け取りました。",
+		en = "Thanks for your purchase! You received {item}.",
+	},
+	shopCoinSpark = {
+		ja = "コイン・スパーク",
+		en = "Coin Spark",
+	},
+	shopCoinSparkDesc = {
+		ja = "コイン500枚。衣装や称号の解放に使おう。",
+		en = "500 coins for titles and cosmetics.",
+	},
+	shopCoinBurst = {
+		ja = "コイン・バースト",
+		en = "Coin Burst",
+	},
+	shopCoinBurstDesc = {
+		ja = "コイン2,400枚のお得なパック。",
+		en = "A 2,400 coin bundle.",
+	},
+	shopVipDojo = {
+		ja = "VIP 道場",
+		en = "VIP Dojo",
+	},
+	shopVipDojoDesc = {
+		ja = "ロビーの専用オーラとVIP称号。対戦性能は変わりません。",
+		en = "A dojo aura and VIP title. No competitive advantage.",
+	},
+	shopNeonTitle = {
+		ja = "ネオン称号",
+		en = "Neon Title",
+	},
+	shopNeonTitleDesc = {
+		ja = "プロフィールに光る称号を追加。",
+		en = "Add a glowing profile title.",
+	},
+	shopPracticePack = {
+		ja = "修行パック",
+		en = "Training Pack",
+	},
+	shopPracticePackDesc = {
+		ja = "コイン850枚＋EXP250。練習を続けよう。",
+		en = "850 coins plus 250 EXP.",
+	},
+
 	-- ---------------------------------------------------------- battle
 	opponentLabel = {
 		ja = "相手HP",
@@ -139,6 +241,58 @@ local STRINGS = {
 	answerWrong = {
 		ja = "ざんねん… 正解は「{answer}」",
 		en = "Missed — the answer is “{answer}”",
+	},
+	comboLabel = {
+		ja = "コンボ {combo}",
+		en = "COMBO {combo}",
+	},
+	energyLabel = {
+		ja = "気勢 {energy}%",
+		en = "SPIRIT {energy}%",
+	},
+	shieldLabel = {
+		ja = "防壁 {shield}",
+		en = "GUARD {shield}",
+	},
+	skillGuard = {
+		ja = "防壁　{cost} 気勢",
+		en = "Guard　{cost} SPIRIT",
+	},
+	skillFocus = {
+		ja = "集中　{cost} 気勢",
+		en = "Focus　{cost} SPIRIT",
+	},
+	skillUsed = {
+		ja = "{skill} 発動！",
+		en = "{skill} activated!",
+	},
+	skillNotReady = {
+		ja = "気勢が足りない",
+		en = "Not enough spirit",
+	},
+	answerBreakdown = {
+		ja = "{message}　コンボ +{combo}　気勢 +{energy}",
+		en = "{message}　Combo +{combo}　Spirit +{energy}",
+	},
+	answerFast = {
+		ja = "速答！",
+		en = "QUICK!",
+	},
+	answerFirst = {
+		ja = "先手！",
+		en = "FIRST!",
+	},
+	answerPerfect = {
+		ja = "完璧な読み！",
+		en = "PERFECT READ!",
+	},
+	battleWaiting = {
+		ja = "相手の回答を待っています…",
+		en = "Waiting for your opponent…",
+	},
+	matchmakingTip = {
+		ja = "同じ級のプレイヤーとレートが近い順にマッチング",
+		en = "Matched by level, then by nearby rating",
 	},
 
 	-- ---------------------------------------------------------- practice
@@ -187,6 +341,14 @@ local STRINGS = {
 	resultDetailDraw = {
 		ja = "HPが同じまま10問終了",
 		en = "Ten rounds finished with equal HP",
+	},
+	resultBattleSummary = {
+		ja = "正答 {correct}/{total}（正答率 {accuracy}%）　最高コンボ {combo}\n報酬 +{coins}コイン　+{xp} EXP",
+		en = "Correct {correct}/{total} ({accuracy}% accuracy)　Best combo {combo}\nReward +{coins} coins　+{xp} EXP",
+	},
+	resultForfeit = {
+		ja = "相手が離脱したため不戦勝",
+		en = "Your opponent left — victory by forfeit",
 	},
 	reasonMatch = {
 		ja = "対戦",
@@ -336,6 +498,14 @@ function I18n.levelFull(levelKey)
 		return t
 	end
 	return t .. " (" .. d .. ")"
+end
+
+function I18n.rankTitle(rating)
+	local rank = Config.rankForRating(tonumber(rating) or Config.DEFAULT_RATING)
+	if current == "en" then
+		return rank.en or rank.label
+	end
+	return rank.label
 end
 
 -- 読みの表示: 英語UIでは「きょうしゅう / kyoushuu」のよう併記する
