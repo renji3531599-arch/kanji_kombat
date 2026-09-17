@@ -376,9 +376,9 @@ def _romaji_many(kana_list):
         used[r]=True
     return out
 
-# ---------------------------------------------------------------- distractors — 常識的で本当に間違えやすい生成
-# 漢検で実際に起こる「あり得る誤読」だけを採用: 音訓入れ替え、別音読み、連濁ミス、熟語の読み替え
-# 不自然な「いっちにち」系の機械的促音挿入は排除し、常識的な誤読だけを厳選
+# ---------------------------------------------------------------- distractors
+# 誤読候補の生成: 音訓入れ替え、別音読み、連濁ミス、熟語の読み替えなど
+# 「学習者がやりそうなミス」を作るだけ。候補に優劣は付けない (選出は pick_distractors でランダム)
 
 _DAKUTEN_MAP = {
     'か': ['が'], 'き': ['ぎ'], 'く': ['ぐ'], 'け': ['げ'], 'こ': ['ご'],
@@ -391,65 +391,6 @@ _DAKUTEN_MAP = {
     'ば': ['は', 'ぱ'], 'び': ['ひ', 'ぴ'], 'ぶ': ['ふ', 'ぷ'], 'べ': ['へ', 'ぺ'], 'ぼ': ['ほ', 'ぽ'],
     'ぱ': ['は', 'ば'], 'ぴ': ['ひ', 'び'], 'ぷ': ['ふ', 'ぶ'], 'ぺ': ['へ', 'べ'], 'ぽ': ['ほ', 'ぼ'],
 }
-
-def _lev(a, b):
-    n, m = len(a), len(b)
-    dp = list(range(m+1))
-    for i in range(1, n+1):
-        ndp = [i] + [0]*m
-        for j in range(1, m+1):
-            cost = 0 if a[i-1] == b[j-1] else 1
-            ndp[j] = min(dp[j]+1, ndp[j-1]+1, dp[j-1]+cost)
-        dp = ndp
-    return dp[m]
-
-def _confusion_score(ans, cand):
-    if cand == ans:
-        return -999
-    ld = abs(len(ans)-len(cand))
-    score = 50
-    if ld == 0:
-        score += 14
-    elif ld == 1:
-        score += 10
-    else:
-        score -= ld * 12
-    d = _lev(ans, cand)
-    if d == 1:
-        score += 24
-    elif d == 2:
-        score += 16
-    elif d == 3:
-        score += 6
-    else:
-        score -= d * 5
-    pref = 0
-    for i in range(min(len(ans), len(cand))):
-        if ans[i]==cand[i]:
-            pref+=1
-        else:
-            break
-    suff = 0
-    for i in range(1, min(len(ans), len(cand))+1):
-        if ans[-i]==cand[-i]:
-            suff+=1
-        else:
-            break
-    score += pref*4 + suff*4
-    # 同じ語尾は超紛らわしい (〜かん/せん, 〜しょう/せい など)
-    if len(ans)>=2 and len(cand)>=2 and ans[-2:]==cand[-2:]:
-        score += 8
-    if len(ans)>=1 and len(cand)>=1 and ans[-1]==cand[-1]:
-        score += 5
-    # 濁点1文字違いは常識的な連濁ミスとして加点
-    if len(ans)==len(cand):
-        diff = [(a,c) for a,c in zip(ans,cand) if a!=c]
-        if len(diff)==1:
-            a,c = diff[0]
-            if c in _DAKUTEN_MAP.get(a, []):
-                score += 18
-    # 現実的な誤読は「同じ漢字の別読み」に起因するので、共通部分が長いほど高得点は維持
-    return score
 
 def _find_segmentation(kanjis, answer_core, kj):
     # kanjis: list of kanji characters (with 々 resolved)
@@ -599,89 +540,57 @@ def _realistic_variants(word, answer, kj, rng):
                 out.add(alt)
     # 長さフィルタと answer 除外
     out = {c for c in out if c != answer and 1 <= len(c) <= 8 and KANA_RE.match(c)}
-    return list(out)
+    # sorted で返す (setの反復順はハッシュランダム化で実行ごとに変わるため、シード再現性のため固定順に)
+    return sorted(out)
 
-def swap_distractors(word, reading, kj, level_pool_answers, forbid, rng, limit=3):
-    # 後方互換: realistic_variants に委譲 (旧呼び出しも自然な誤読を返す)
-    cands = _realistic_variants(word, reading, kj, rng)
-    out=[]
-    for c in cands:
-        if c != reading and c not in forbid and c not in out and 1 <= len(c) <=8:
-            out.append(c)
-            if len(out)>=limit*2:
-                break
-    # 長さ差が小さいものから返す
-    out.sort(key=lambda x: (abs(len(x)-len(reading)), _lev(reading,x)))
-    return out[:limit]
+def pick_distractors(answer, pool_readings, forbid, synthetic_pool, rng, n=3):
+    # 誤答の資格は「ミスか、それ以外か」だけ:
+    #   ミス = 正答でもなく、同語・同漢字の他の正しい読みでもなく、かなのみで、長さが近い
+    #   (さらに英語UIで区別がつくよう、正答・他の選択肢とローマ字が被らないものだけ採用)
+    # 資格を満たす候補に優劣は付けない。加点・順位付けはせず、ランダムに n 個選ぶ
+    used = set([answer]) | set(forbid)
 
-def pick_tricky_distractors(answer, pool_readings, forbid, synthetic_pool, rng, n=3):
-    # synthetic_pool は realistic_variants の結果が入る想定
-    candidates=[]
-    seen=set([answer]+list(forbid))
-    for r in pool_readings:
-        if r in seen: continue
-        if abs(len(r)-len(answer))>1: continue
-        if not KANA_RE.match(r): continue
-        candidates.append(r)
-    for r in synthetic_pool:
-        if r in seen or r in candidates: continue
-        if abs(len(r)-len(answer))>1: continue
-        candidates.append(r)
-    # 常識的な誤読は「実在する読み」なので、pool と realistic の両方を統合してスコア付け
-    # 現実的な誤読ほど高得点になるよう、realistic 由来は少しボーナス
-    realistic_set=set(synthetic_pool)
-    scored=[]
-    for c in candidates:
-        base=_confusion_score(answer,c)
-        if c in realistic_set:
-            base += 18  # 現実的な誤読(同じ漢字の別読み)を強く優先
-        # 実在語の読みはより自然なので、pool 由来で長さが同じならさらに加点
-        scored.append((base,c))
-    scored.sort(key=lambda t: (-t[0], rng.random()))
-    out=[]
-    for sc,c in scored:
-        if c in seen or c in out: continue
-        test_list=[answer]+out+[c]
-        rom=_romaji_many(test_list)
-        if len(set(rom))!=len(rom):
-            continue
-        out.append(c)
-        seen.add(c)
-        if len(out)>=n:
-            break
-    if len(out)<n:
-        extra_cands=[]
-        for r in pool_readings:
-            if r in seen or r==answer or r in out: continue
-            if abs(len(r)-len(answer))>2: continue
-            extra_cands.append(r)
-        for r in synthetic_pool:
-            if r in seen or r in out or r in extra_cands: continue
-            if abs(len(r)-len(answer))>2: continue
-            extra_cands.append(r)
-        rng.shuffle(extra_cands)
-        scored2=[(_confusion_score(answer,c)+(18 if c in realistic_set else 0),c) for c in extra_cands]
-        scored2.sort(key=lambda t: (-t[0], rng.random()))
-        for sc,c in scored2:
-            test_list=[answer]+out+[c]
-            rom=_romaji_many(test_list)
-            if len(set(rom))!=len(rom):
+    def candidates(delta):
+        out = []
+        for r in list(pool_readings) + list(synthetic_pool):
+            if r in used or r in out:
                 continue
-            out.append(c)
-            seen.add(c)
-            if len(out)>=n:
-                break
-    if len(out)<n:
-        for sc,c in scored:
-            if c in out or c in seen: continue
-            out.append(c)
-            if len(out)>=n:
-                break
-    return out[:n]
+            if abs(len(r) - len(answer)) > delta:
+                continue
+            if not KANA_RE.match(r):
+                continue
+            out.append(r)
+        return out
 
-def pick_random_readings(reading, pool_readings, forbid, rng, n, length_delta=1):
-    # 旧互換: 空syntheticで委譲
-    return pick_tricky_distractors(reading, pool_readings, forbid, [], rng, n)
+    picked = []
+    # 第1候補: 長さ±1 / 第2候補: 長さ±2 (どちらもローマ字重複チェック付き)
+    for delta in (1, 2):
+        cands = candidates(delta)
+        rng.shuffle(cands)
+        for c in cands:
+            if len(picked) >= n:
+                break
+            rom = _romaji_many([answer] + picked + [c])
+            if len(set(rom)) != len(rom):
+                continue
+            picked.append(c)
+            used.add(c)
+        if len(picked) >= n:
+            break
+    # 最終フォールバック: 正答と同じローマ字のものだけ除外して、残りから順に埋める
+    if len(picked) < n:
+        answer_rom = _romaji_many([answer])[0]
+        for c in candidates(2):
+            if len(picked) >= n:
+                break
+            if c in used:
+                continue
+            if _romaji_many([c])[0] == answer_rom:
+                continue
+            picked.append(c)
+            used.add(c)
+    return picked[:n]
+
 
 
 # ---------------------------------------------------------------- synthesis
@@ -737,11 +646,10 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
             if not (1 <= len(reading) <= 7):
                 continue
             forbidden = set(r for r in readings if r != reading)
-            # 常識的な誤読だけを厳選: 同じ漢字の別音/訓・連濁ミス由来
+            # 誤読候補 (同じ漢字の別音/訓・連濁ミスなど) を生成
             syn = _realistic_variants(word, reading, kj, rng)
-            # pool と併せて最も紛らわしい3つを厳選
-            distr = pick_tricky_distractors(reading, pool_ans, forbidden, syn, rng, 3)
-            # 最低でも swap が1つ入っていればさらに紛らわしいので、スコア順で入れ直し
+            # 誤答は「ミス」なら同格: pool の実在読みと候補を混ぜてランダムに3つ
+            distr = pick_distractors(reading, pool_ans, forbidden, syn, rng, 3)
             if try_add(word, reading, distr, 'w', forbidden):
                 n += 1
                 kanji_covered(word)
@@ -768,7 +676,7 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
             forbidden = set(reads) - {answer}
             # 単漢字は別読みが自然な誤読
             syn = _realistic_variants(ch, answer, kj, rng)
-            distr = pick_tricky_distractors(answer, pool_ans, forbidden, syn, rng, 3)
+            distr = pick_distractors(answer, pool_ans, forbidden, syn, rng, 3)
             if try_add(ch, answer, distr, 's', forbidden):
                 n += 1
         return n
@@ -791,7 +699,9 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
     # D: top-up with extra readings of pool kanji (no S questions at 準1級/1級)
     if len(questions) < TARGET and li < 10:
         base = pools[li]['new'] if li >= 6 else set(pool)
-        extra = [ch for ch in sorted(base, key=lambda c: rng.random())]
+        # set の反復順はハッシュランダム化で変わるので、先に固定順に並べてからシャッフル
+        extra = sorted(base)
+        rng.shuffle(extra)
         for ch in extra:
             if len(questions) >= TARGET:
                 break
@@ -807,7 +717,7 @@ def synthesize_level(li, pools, kj, words_by_level, used_global, used_prompt_lev
                     continue
                 forbidden = set(info['kun'] + info['on']) - {answer}
                 syn = _realistic_variants(ch, answer, kj, rng)
-                distr = pick_tricky_distractors(answer, pool_ans, forbidden, syn, rng, 3)
+                distr = pick_distractors(answer, pool_ans, forbidden, syn, rng, 3)
                 try_add(ch, answer, distr, 's', forbidden)
 
     return questions

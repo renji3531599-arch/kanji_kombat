@@ -358,6 +358,35 @@ def main():
     if collisions:
         errors += 1
 
+    # ---- 6.5 place (rbxlx) 整合性: ビルド済みなら中身を検証
+    # 「build_place.py がモジュールを同條し忘れて Main.server.luau の WaitForChild が
+    #  永久待機し、ワールドが生成されずキャラクターが落ち続ける」のような事故を検出する
+    place = os.path.join(ROOT, 'KanjiKombat.rbxlx')
+    if os.path.exists(place):
+        print()
+        print('--- place file (KanjiKombat.rbxlx) ---')
+        xml = open(place, encoding='utf-8').read()
+        place_errors = 0
+        # サーバーモジュールが全部入っているか
+        for path in sorted(glob.glob(os.path.join(ROOT, 'src', 'server', 'Modules', '*.luau'))):
+            name = os.path.basename(path)[:-5]
+            if '<string name="Name">%s</string>' % name not in xml:
+                print('  FAIL module missing from place:', name)
+                place_errors += 1
+        # 問題データが全部入っているか
+        for path in sorted(glob.glob(os.path.join(ROOT, 'src', 'server', 'data', '*.luau'))):
+            name = os.path.basename(path)[:-5]
+            if '<string name="Name">%s</string>' % name not in xml:
+                print('  FAIL question data missing from place:', name)
+                place_errors += 1
+        # スポーン: スクリプト起動前に湧いたキャラクターが落ち続けないように
+        if '<Item class="SpawnLocation"' not in xml:
+            print('  FAIL no SpawnLocation in place (players fall forever before scripts run)')
+            place_errors += 1
+        if place_errors == 0:
+            print('  all server modules, question data and SpawnLocation embedded: OK')
+        errors += place_errors
+
     print()
     print('RESULT:', 'OK' if errors == 0 else 'NG (%d)' % errors)
     return 1 if errors else 0
