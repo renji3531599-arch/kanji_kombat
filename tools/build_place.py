@@ -55,9 +55,13 @@ def build():
     replicated = item('ReplicatedStorage', 'ReplicatedStorage', children=shared)
 
     # ----- ServerScriptService
+    # src/server/Modules/*.luau を全部入れる。1つでも欠けると Main.server.luau の
+    # WaitForChild が永久待機し、ワールドが生成されずキャラクターが落ち続ける。
+    module_dir = os.path.join(SRC, 'server', 'Modules')
+    module_files = sorted(f for f in os.listdir(module_dir) if f.endswith('.luau'))
     modules = folder('Modules', ''.join(
-        script_item('ModuleScript', n, 'src/server/Modules/%s.luau' % n)
-        for n in ['QuestionBank', 'StatsService', 'ArenaService', 'LobbyService', 'MatchService']
+        script_item('ModuleScript', f[:-5], 'src/server/Modules/%s' % f)
+        for f in module_files
     ))
     data_dir = os.path.join(SRC, 'server', 'data')
     data_files = sorted(f for f in os.listdir(data_dir) if f.endswith('.luau'))
@@ -81,8 +85,39 @@ def build():
     ))
     starter = item('StarterPlayer', 'StarterPlayer', children=sps)
 
-    # ----- Workspace (マップは実行時にサーバーが生成)
-    workspace = item('Workspace', 'Workspace')
+    # ----- Workspace
+    # サーバースクリプトの起動より先にキャラクターが湧く場合、およびスクリプトが
+    # モジュール欠落で止まった場合に備えて、床と SpawnLocation を place 側に置く。
+    floor = item('Part', 'Baseplate', extra_props=(
+        '<bool name="Anchored">true</bool>'
+        '<bool name="Locked">true</bool>'
+        '<CoordinateFrame name="CFrame">'
+        '<X>0</X><Y>-2</Y><Z>0</Z>'
+        '<R00>1</R00><R01>0</R01><R02>0</R02>'
+        '<R10>0</R10><R11>1</R11><R12>0</R12>'
+        '<R20>0</R20><R21>0</R21><R22>1</R22>'
+        '</CoordinateFrame>'
+        '<Vector3 name="size"><X>512</X><Y>4</Y><Z>512</Z></Vector3>'
+        '<Color3uint8 name="Color3uint8">1842204</Color3uint8>'
+        '<token name="TopSurface">0</token>'
+        '<token name="BottomSurface">0</token>'
+    ))
+    spawn_pad = item('SpawnLocation', 'Spawn', extra_props=(
+        '<bool name="Anchored">true</bool>'
+        '<CoordinateFrame name="CFrame">'
+        '<X>0</X><Y>1.5</Y><Z>54</Z>'
+        '<R00>1</R00><R01>0</R01><R02>0</R02>'
+        '<R10>0</R10><R11>1</R11><R12>0</R12>'
+        '<R20>0</R20><R21>0</R21><R22>1</R22>'
+        '</CoordinateFrame>'
+        '<Vector3 name="size"><X>12</X><Y>1</Y><Z>12</Z></Vector3>'
+        '<Color3uint8 name="Color3uint8">5918550</Color3uint8>'
+        '<token name="TopSurface">0</token>'
+        '<token name="BottomSurface">0</token>'
+        '<bool name="Neutral">true</bool>'
+        '<float name="Duration">0</float>'
+    ))
+    workspace = item('Workspace', 'Workspace', children=floor + spawn_pad)
 
     header = ('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
               'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '

@@ -162,7 +162,8 @@ def client_sim(lua):
 
 SERVER_MODULES = [
     # QuestionBank は読み込み時に Data/Questions_* を require するので、この順序で
-    'QuestionBank', 'StatsService', 'ArenaService', 'LobbyService', 'MatchService',
+    'QuestionBank', 'StatsService', 'ArenaService', 'LobbyService',
+    'CurrencyService', 'ProgressionService', 'ShopService', 'MatchService',
 ]
 
 
@@ -357,6 +358,67 @@ def main():
         print('  e.g.', samples)
     if collisions:
         errors += 1
+
+    # ---- 6. 誤答が機械的連濁捏造になっていないこと (いちにち→いぢにち 禁止)
+    print()
+    print('--- distractor quality ---')
+    k10 = mods['Questions_K10']
+    if k10 is not None:
+        found_ichinichi = None
+        found_gakkou = None
+        n = len(k10)
+        fake_rendaku = 0
+        for i in range(1, n + 1):
+            q = k10[i]
+            ds = [str(q.d[1]), str(q.d[2]), str(q.d[3])]
+            if q.p == '一日':
+                found_ichinichi = (q.a, ds)
+            if q.p == '学校':
+                found_gakkou = (q.a, ds)
+        if found_ichinichi:
+            a, ds = found_ichinichi
+            print('  一日 -> %s  (%s)' % (a, ' / '.join(ds)))
+            if 'いぢにち' in ds:
+                print('  FAIL 一日 has mechanical rendaku distractor いぢにち')
+                errors += 1
+        else:
+            print('  WARN no 一日 question in K10')
+        if found_gakkou:
+            a, ds = found_gakkou
+            print('  学校 -> %s  (%s)' % (a, ' / '.join(ds)))
+            if a == 'がっこう' and 'がっきょう' not in ds:
+                # 音訓が少ない校は きょう への入れ替えが現実的なミス。プール埋めでもよいが
+                # ミス候補があるなら採用されているはず。
+                print('  WARN 学校 missing がっきょう (may be rng if other misses filled the 3)')
+        else:
+            print('  WARN no 学校 question in K10')
+    else:
+        print('  FAIL Questions_K10 not loaded')
+        errors += 1
+
+    # ---- 7. place (rbxlx) 整合性: モジュール欠落でワールド未生成→落下、の回帰防止
+    place = os.path.join(ROOT, 'KanjiKombat.rbxlx')
+    if os.path.exists(place):
+        print()
+        print('--- place file (KanjiKombat.rbxlx) ---')
+        xml = open(place, encoding='utf-8').read()
+        place_errors = 0
+        for path in sorted(glob.glob(os.path.join(ROOT, 'src', 'server', 'Modules', '*.luau'))):
+            name = os.path.basename(path)[:-5]
+            if '<string name="Name">%s</string>' % name not in xml:
+                print('  FAIL module missing from place:', name)
+                place_errors += 1
+        for path in sorted(glob.glob(os.path.join(ROOT, 'src', 'server', 'data', '*.luau'))):
+            name = os.path.basename(path)[:-5]
+            if '<string name="Name">%s</string>' % name not in xml:
+                print('  FAIL question data missing from place:', name)
+                place_errors += 1
+        if '<Item class="SpawnLocation"' not in xml:
+            print('  FAIL no SpawnLocation in place (players fall forever before scripts run)')
+            place_errors += 1
+        if place_errors == 0:
+            print('  all server modules, question data and SpawnLocation embedded: OK')
+        errors += place_errors
 
     print()
     print('RESULT:', 'OK' if errors == 0 else 'NG (%d)' % errors)

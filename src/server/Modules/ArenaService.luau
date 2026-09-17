@@ -11,11 +11,12 @@ local ARENA_GAP = 300
 
 local function part(props)
 	local p = Instance.new("Part")
-	p.Anchored = true
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.Material = Enum.Material.SmoothPlastic
 	for k, v in pairs(props) do p[k]=v end
+	p.Anchored = true
+	p.CanCollide = true
 	return p
 end
 

@@ -8,10 +8,11 @@ local LobbyService = {}
 
 local function part(props)
 	local p = Instance.new("Part")
-	p.Anchored = true
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	for k, v in pairs(props) do p[k]=v end
+	p.Anchored = true
+	p.CanCollide = true
 	return p
 end
 
@@ -320,15 +321,19 @@ function LobbyService.build(folder)
 	end
 
 	-- ── スポーン ───────────────────────────────────────
-	local spawnLoc = Instance.new("SpawnLocation")
-	spawnLoc.Name = "Spawn"
-	spawnLoc.Size = Vector3.new(12,1,12)
-	spawnLoc.Position = Vector3.new(0,1.5,54)
-	spawnLoc.Anchored = true
-	spawnLoc.Neutral = true
-	spawnLoc.Duration = 0
-	spawnLoc.Color = Color3.fromRGB(90,75,110)
-	spawnLoc.Parent = lobby
+	-- placeファイル側に既にSpawnLocationがある場合 (スクリプト起動前の湧き用) は二重に作らない
+	if not workspace:FindFirstChildWhichIsA("SpawnLocation", true) then
+		local spawnLoc = Instance.new("SpawnLocation")
+		spawnLoc.Name = "Spawn"
+		spawnLoc.Size = Vector3.new(12,1,12)
+		spawnLoc.Position = Vector3.new(0,1.5,54)
+		spawnLoc.Anchored = true
+		spawnLoc.CanCollide = true
+		spawnLoc.Neutral = true
+		spawnLoc.Duration = 0
+		spawnLoc.Color = Color3.fromRGB(90,75,110)
+		spawnLoc.Parent = lobby
+	end
 
 	LobbyService.spawnCFrame = CFrame.new(0, 8, 54)
 	LobbyService.spectateCFrame = CFrame.new(0, 14, 12) * CFrame.Angles(math.rad(-12), 0, 0)
